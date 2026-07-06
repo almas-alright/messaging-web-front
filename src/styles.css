@@ -183,7 +183,13 @@ textarea {
   background: #fff9ed;
 }
 
-.backend-status--ok {
+.backend-status--connecting {
+  border-color: #dbc8a7;
+  background: #fff9ed;
+}
+
+.backend-status--ok,
+.backend-status--connected {
   border-color: #b8d3c6;
   background: #edf8f2;
 }
@@ -235,6 +241,13 @@ textarea {
 .message-bubble--own {
   background: #dff3e9;
   justify-self: end;
+}
+
+.message-bubble--system {
+  background: #eef3f1;
+  color: #52605a;
+  justify-self: center;
+  text-align: center;
 }
 
 .composer-shell {

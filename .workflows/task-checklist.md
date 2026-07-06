@@ -35,11 +35,11 @@
 
 ## Phase 05: WebSocket Connection
 
-- [ ] 05.01 Add WebSocket client module
-- [ ] 05.02 Connect using configured WebSocket URL and JWT
-- [ ] 05.03 Show connection state
-- [ ] 05.04 Handle `connection.ready`
-- [ ] 05.05 Add reconnect/disconnect buttons
+- [x] 05.01 Add WebSocket client module
+- [x] 05.02 Connect using configured WebSocket URL and JWT
+- [x] 05.03 Show connection state
+- [x] 05.04 Handle `connection.ready`
+- [x] 05.05 Add reconnect/disconnect buttons
 
 ## Phase 06: Conversation Join And History
 

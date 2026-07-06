@@ -11,12 +11,20 @@ type SettingsPanelProps = {
     state: "idle" | "checking" | "ok" | "error";
     label: string;
   };
+  webSocketStatus: {
+    state: "idle" | "connecting" | "connected" | "error";
+    label: string;
+  };
+  readyUserId: string | null;
   jwtToken: string;
   currentUser: CurrentUserResponse | null;
   onConfigChange: (config: AppConfig) => void;
   onJwtTokenChange: (token: string) => void;
   onJwtClear: () => void;
   onCheckCurrentUser: () => void;
+  onWebSocketConnect: () => void;
+  onWebSocketReconnect: () => void;
+  onWebSocketDisconnect: () => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
 };
@@ -25,12 +33,17 @@ export function SettingsPanel({
   config,
   backendStatus,
   authStatus,
+  webSocketStatus,
+  readyUserId,
   jwtToken,
   currentUser,
   onConfigChange,
   onJwtTokenChange,
   onJwtClear,
   onCheckCurrentUser,
+  onWebSocketConnect,
+  onWebSocketReconnect,
+  onWebSocketDisconnect,
   onCheckHealth,
   onCheckReady,
 }: SettingsPanelProps) {
@@ -126,9 +139,43 @@ export function SettingsPanel({
 
       <section className="panel-section">
         <h2>Coming next</h2>
+        <button
+          className="full-width-button"
+          type="button"
+          onClick={onWebSocketConnect}
+          disabled={!jwtToken.trim()}
+        >
+          Connect WebSocket
+        </button>
+        <div className="button-row">
+          <button
+            type="button"
+            onClick={onWebSocketReconnect}
+            disabled={!jwtToken.trim()}
+          >
+            Reconnect
+          </button>
+          <button type="button" onClick={onWebSocketDisconnect}>
+            Disconnect
+          </button>
+        </div>
+        <div
+          className={`backend-status backend-status--${webSocketStatus.state}`}
+        >
+          <span>WebSocket</span>
+          <strong>{webSocketStatus.label}</strong>
+        </div>
+        {readyUserId ? (
+          <dl className="config-list">
+            <div>
+              <dt>Ready user</dt>
+              <dd>{readyUserId}</dd>
+            </div>
+          </dl>
+        ) : null}
         <ul className="plain-list">
-          <li>WebSocket uses JWT later as token query</li>
-          <li>File upload uses JWT later as bearer auth</li>
+          <li>Join conversation</li>
+          <li>Load message history</li>
         </ul>
       </section>
     </aside>

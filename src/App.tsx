@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createHttpClient, type CurrentUserResponse } from "./api/httpClient";
 import {
   clearStoredJwt,
@@ -10,6 +10,12 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
 import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
+import {
+  createMessagingWebSocket,
+  type ServerEvent,
+  type MessagingWebSocket,
+} from "./realtime/webSocketClient";
+import type { ConnectionState } from "./types/chat";
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -21,7 +27,13 @@ type AuthStatus = {
   label: string;
 };
 
+type WebSocketStatus = {
+  state: ConnectionState;
+  label: string;
+};
+
 export function App() {
+  const webSocketRef = useRef<MessagingWebSocket | null>(null);
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
   const [jwtToken, setJwtToken] = useState(() => loadStoredJwt());
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
@@ -35,6 +47,11 @@ export function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(
     null,
   );
+  const [webSocketStatus, setWebSocketStatus] = useState<WebSocketStatus>({
+    state: "idle",
+    label: "Not connected",
+  });
+  const [readyUserId, setReadyUserId] = useState<string | null>(null);
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -77,6 +94,47 @@ export function App() {
     }
   }
 
+  function handleWebSocketConnect() {
+    setWebSocketStatus({ state: "connecting", label: "Connecting" });
+    setReadyUserId(null);
+    webSocketRef.current?.disconnect();
+    const client = createMessagingWebSocket(config, jwtToken, {
+      onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
+      onMessage: handleWebSocketMessage,
+      onClose: () =>
+        setWebSocketStatus({ state: "idle", label: "Disconnected" }),
+      onError: () =>
+        setWebSocketStatus({ state: "error", label: "Connection error" }),
+    });
+    webSocketRef.current = client;
+    client.connect();
+  }
+
+  function handleWebSocketReconnect() {
+    handleWebSocketConnect();
+  }
+
+  function handleWebSocketDisconnect() {
+    webSocketRef.current?.disconnect();
+    webSocketRef.current = null;
+    setReadyUserId(null);
+    setWebSocketStatus({ state: "idle", label: "Disconnected" });
+  }
+
+  function handleWebSocketMessage(event: ServerEvent) {
+    if (
+      event.type === "connection.ready" &&
+      "user_id" in event &&
+      typeof event.user_id === "string"
+    ) {
+      setReadyUserId(event.user_id);
+      setWebSocketStatus({
+        state: "connected",
+        label: `Ready as ${event.user_id}`,
+      });
+    }
+  }
+
   async function runBackendCheck(
     label: string,
     check: () => Promise<{ status: string; service: string }>,
@@ -103,16 +161,21 @@ export function App() {
           config={config}
           backendStatus={backendStatus}
           authStatus={authStatus}
+          webSocketStatus={webSocketStatus}
+          readyUserId={readyUserId}
           jwtToken={jwtToken}
           currentUser={currentUser}
           onConfigChange={handleConfigChange}
           onJwtTokenChange={handleJwtTokenChange}
           onJwtClear={handleJwtClear}
           onCheckCurrentUser={handleCurrentUserCheck}
+          onWebSocketConnect={handleWebSocketConnect}
+          onWebSocketReconnect={handleWebSocketReconnect}
+          onWebSocketDisconnect={handleWebSocketDisconnect}
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />
-        <ChatPanel />
+        <ChatPanel connectionState={webSocketStatus} readyUserId={readyUserId} />
       </div>
     </AppShell>
   );
