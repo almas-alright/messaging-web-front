@@ -210,17 +210,44 @@ textarea {
   align-items: center;
   border-bottom: 1px solid #e3e8e4;
   display: flex;
+  gap: 16px;
   justify-content: space-between;
   padding: 18px 20px;
 }
 
+.chat-panel__subtitle {
+  color: #66736d;
+  font-size: 0.9rem;
+  margin: 6px 0 0;
+}
+
 .message-list {
   align-content: end;
-  background: #f6f8f6;
+  background:
+    linear-gradient(rgba(247, 249, 247, 0.92), rgba(247, 249, 247, 0.92)),
+    repeating-linear-gradient(
+      135deg,
+      #e8efeb 0,
+      #e8efeb 1px,
+      transparent 1px,
+      transparent 22px
+    );
   display: grid;
-  gap: 12px;
+  gap: 10px;
   overflow: auto;
   padding: 20px;
+}
+
+.message-row {
+  display: grid;
+}
+
+.message-row--own {
+  justify-items: end;
+}
+
+.message-row--other {
+  justify-items: start;
 }
 
 .message-bubble {
@@ -233,10 +260,13 @@ textarea {
   margin: 0;
 }
 
-.message-bubble small {
+.message-bubble footer {
+  align-items: center;
   color: #6d7872;
-  display: block;
+  display: flex;
   font-size: 0.75rem;
+  gap: 10px;
+  justify-content: space-between;
   margin-top: 6px;
 }
 
@@ -247,18 +277,34 @@ textarea {
 
 .message-bubble--own {
   background: #dff3e9;
-  justify-self: end;
 }
 
-.message-bubble--own small {
-  text-align: right;
-}
-
-.message-bubble--system {
+.timeline-status,
+.message-empty-state {
   background: #eef3f1;
+  border: 1px solid #dde7e2;
+  border-radius: 8px;
   color: #52605a;
   justify-self: center;
+  max-width: min(520px, 100%);
+  padding: 10px 12px;
   text-align: center;
+}
+
+.timeline-status p,
+.message-empty-state strong,
+.message-empty-state span {
+  margin: 0;
+}
+
+.message-empty-state {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+}
+
+.message-empty-state span {
+  color: #6d7872;
 }
 
 .composer-shell {

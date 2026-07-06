@@ -51,7 +51,7 @@
 
 ## Phase 07: WhatsApp-Like Chat UI
 
-- [ ] 07.01 Add message list layout
+- [x] 07.01 Add message list layout
 - [ ] 07.02 Add own/other message bubbles
 - [ ] 07.03 Add message composer
 - [ ] 07.04 Send `message.send`
