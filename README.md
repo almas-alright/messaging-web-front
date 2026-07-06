@@ -90,6 +90,80 @@ Other computers on the same local network can open:
 http://192.168.1.10:5173
 ```
 
+## Local Network Demo Guide
+
+Use this when the backend and frontend run on one Ubuntu PC and other devices
+on the same Wi-Fi/LAN need to test the chat.
+
+1. Find the Ubuntu PC LAN IP:
+
+```bash
+hostname -I
+```
+
+Use the first address that matches your local network, for example
+`192.168.1.10` or `10.10.33.97`.
+
+2. Start the backend from the backend repository:
+
+```bash
+cd ../messaging-service
+docker compose up --build
+```
+
+Backend URLs should be reachable from the Ubuntu PC:
+
+```text
+http://<host-ip>:8080/health
+http://<host-ip>:8080/ready
+```
+
+3. Configure the frontend for LAN access.
+
+Create `.env.local` in this repository:
+
+```env
+VITE_API_BASE_URL=http://<host-ip>:8080
+VITE_WS_BASE_URL=ws://<host-ip>:8080/ws
+```
+
+You can also update these values from the frontend settings panel. The settings
+panel stores overrides in browser localStorage for demo testing.
+
+4. Start the frontend dev server:
+
+```bash
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+Open from the Ubuntu PC:
+
+```text
+http://localhost:5173
+```
+
+Open from another device on the same network:
+
+```text
+http://<host-ip>:5173
+```
+
+5. Demo auth and chat flow:
+
+- Paste a manually generated JWT.
+- Run `Check current user`.
+- Connect the WebSocket.
+- Join a conversation such as `conv-001`.
+- Load history.
+- Send text, emoji, and file messages.
+
+For file messages, upload the selected file first, then send the message after
+the attachment ID appears.
+
+Make sure firewall rules allow inbound traffic to ports `5173` and `8080` on
+the Ubuntu PC during local testing.
+
 ## Frontend Checks
 
 Run:
