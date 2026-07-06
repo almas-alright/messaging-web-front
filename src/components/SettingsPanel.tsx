@@ -2,6 +2,10 @@ import type { AppConfig } from "../config/env";
 
 type SettingsPanelProps = {
   config: AppConfig;
+  backendStatus: {
+    state: "idle" | "checking" | "ok" | "error";
+    label: string;
+  };
   onConfigChange: (config: AppConfig) => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
@@ -9,6 +13,7 @@ type SettingsPanelProps = {
 
 export function SettingsPanel({
   config,
+  backendStatus,
   onConfigChange,
   onCheckHealth,
   onCheckReady,
@@ -47,13 +52,17 @@ export function SettingsPanel({
             Check ready
           </button>
         </div>
+        <div className={`backend-status backend-status--${backendStatus.state}`}>
+          <span>Status</span>
+          <strong>{backendStatus.label}</strong>
+        </div>
       </section>
 
       <section className="panel-section">
         <h2>Coming next</h2>
         <ul className="plain-list">
           <li>Manual JWT paste</li>
-          <li>Backend connection status</li>
+          <li>Authenticated current user</li>
           <li>Saved local demo settings</li>
         </ul>
       </section>

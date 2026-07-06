@@ -19,11 +19,11 @@
 
 ## Phase 03: Backend Configuration And Health Check
 
-- [ ] 03.01 Add API base URL settings form
-- [ ] 03.02 Add WebSocket URL settings form
-- [ ] 03.03 Persist settings in local storage
-- [ ] 03.04 Add health/readiness check buttons
-- [ ] 03.05 Show backend connection status
+- [x] 03.01 Add API base URL settings form
+- [x] 03.02 Add WebSocket URL settings form
+- [x] 03.03 Persist settings in local storage
+- [x] 03.04 Add health/readiness check buttons
+- [x] 03.05 Show backend connection status
 
 ## Phase 04: JWT Demo Auth
 

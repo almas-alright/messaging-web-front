@@ -134,6 +134,41 @@ textarea {
   filter: brightness(0.97);
 }
 
+.backend-status {
+  border: 1px solid #e3e8e4;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.backend-status span {
+  color: #5b6862;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.backend-status strong {
+  color: #16201c;
+  font-size: 0.95rem;
+}
+
+.backend-status--checking {
+  border-color: #dbc8a7;
+  background: #fff9ed;
+}
+
+.backend-status--ok {
+  border-color: #b8d3c6;
+  background: #edf8f2;
+}
+
+.backend-status--error {
+  border-color: #e5b4ad;
+  background: #fff1ef;
+}
+
 .chat-panel {
   display: grid;
   grid-template-rows: auto minmax(320px, 1fr) auto;
