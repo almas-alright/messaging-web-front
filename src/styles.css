@@ -52,6 +52,31 @@ textarea {
   margin-top: 24px;
 }
 
+.config-list {
+  display: grid;
+  gap: 10px;
+  margin: 24px 0 0;
+}
+
+.config-list div {
+  border: 1px solid #e3e8e4;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.config-list dt {
+  color: #5b6862;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.config-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .status-pill {
   border: 1px solid #b8d3c6;
   border-radius: 999px;
