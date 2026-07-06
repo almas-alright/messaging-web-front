@@ -1,13 +1,17 @@
 import { AppShell } from "./components/AppShell";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { loadAppConfig } from "./config/env";
-import { ChatPreview } from "./features/chat/ChatPreview";
+import { ChatPanel } from "./features/chat/ChatPanel";
 
 export function App() {
   const config = loadAppConfig();
 
   return (
     <AppShell>
-      <ChatPreview config={config} />
+      <div className="demo-layout">
+        <SettingsPanel config={config} />
+        <ChatPanel />
+      </div>
     </AppShell>
   );
 }
