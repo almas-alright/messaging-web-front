@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import type { ChatMessage, ConnectionState } from "../../types/chat";
 
 const EMOJI_OPTIONS = ["👍", "😊", "😂", "🔥", "🎉", "🙏", "❤️", "✅"];
@@ -53,6 +53,22 @@ export function ChatPanel({
       const nextCursorPosition = selectionStart + emoji.length;
       textArea?.setSelectionRange(nextCursorPosition, nextCursorPosition);
     });
+  }
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (!isComposerDisabled && messageDraft.trim()) {
+      onMessageSend();
+    }
   }
 
   return (
@@ -165,6 +181,7 @@ export function ChatPanel({
           <textarea
             aria-label="Message text"
             disabled={isComposerDisabled}
+            onKeyDown={handleComposerKeyDown}
             onChange={(event) => onMessageDraftChange(event.target.value)}
             placeholder={
               isComposerDisabled

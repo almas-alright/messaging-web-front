@@ -62,7 +62,7 @@
 
 - [x] 08.01 Add simple emoji picker
 - [x] 08.02 Insert emoji into composer
-- [ ] 08.03 Keep keyboard typing simple
+- [x] 08.03 Keep keyboard typing simple
 - [ ] 08.04 Verify emoji send/receive through WebSocket
 
 ## Phase 09: File Upload And File Message
