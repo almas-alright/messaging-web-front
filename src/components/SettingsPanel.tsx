@@ -3,9 +3,16 @@ import type { AppConfig } from "../config/env";
 type SettingsPanelProps = {
   config: AppConfig;
   onConfigChange: (config: AppConfig) => void;
+  onCheckHealth: () => void;
+  onCheckReady: () => void;
 };
 
-export function SettingsPanel({ config, onConfigChange }: SettingsPanelProps) {
+export function SettingsPanel({
+  config,
+  onConfigChange,
+  onCheckHealth,
+  onCheckReady,
+}: SettingsPanelProps) {
   return (
     <aside className="settings-panel" aria-label="Demo setup">
       <section className="panel-section">
@@ -32,13 +39,21 @@ export function SettingsPanel({ config, onConfigChange }: SettingsPanelProps) {
             placeholder="ws://localhost:8080/ws"
           />
         </label>
+        <div className="button-row">
+          <button type="button" onClick={onCheckHealth}>
+            Check health
+          </button>
+          <button type="button" onClick={onCheckReady}>
+            Check ready
+          </button>
+        </div>
       </section>
 
       <section className="panel-section">
         <h2>Coming next</h2>
         <ul className="plain-list">
           <li>Manual JWT paste</li>
-          <li>Health and readiness checks</li>
+          <li>Backend connection status</li>
           <li>Saved local demo settings</li>
         </ul>
       </section>
