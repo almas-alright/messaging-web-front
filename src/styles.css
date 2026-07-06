@@ -346,6 +346,56 @@ textarea {
   gap: 6px;
 }
 
+.composer-tools {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.emoji-toggle-button,
+.emoji-option {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #ccd6cf;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.emoji-toggle-button {
+  font-size: 1.05rem;
+  height: 36px;
+  width: 42px;
+}
+
+.emoji-toggle-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.emoji-picker {
+  background: #ffffff;
+  border: 1px solid #d9e0da;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+}
+
+.emoji-option {
+  font-size: 1.1rem;
+  height: 34px;
+  width: 34px;
+}
+
+.emoji-option:hover,
+.emoji-toggle-button:hover:not(:disabled) {
+  border-color: #23765a;
+  box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.08);
+}
+
 .composer-input-stack textarea {
   border: 1px solid #ccd6cf;
   border-radius: 8px;

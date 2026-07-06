@@ -1,4 +1,7 @@
+import { useRef, useState, type KeyboardEvent } from "react";
 import type { ChatMessage, ConnectionState } from "../../types/chat";
+
+const EMOJI_OPTIONS = ["👍", "😊", "😂", "🔥", "🎉", "🙏", "❤️", "✅"];
 
 type ChatPanelProps = {
   connectionState: {
@@ -32,6 +35,41 @@ export function ChatPanel({
   onMessageSend,
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  function handleEmojiSelect(emoji: string) {
+    const textArea = textAreaRef.current;
+    const selectionStart = textArea?.selectionStart ?? messageDraft.length;
+    const selectionEnd = textArea?.selectionEnd ?? messageDraft.length;
+    const nextDraft = `${messageDraft.slice(
+      0,
+      selectionStart,
+    )}${emoji}${messageDraft.slice(selectionEnd)}`;
+
+    onMessageDraftChange(nextDraft);
+    window.requestAnimationFrame(() => {
+      textArea?.focus();
+      const nextCursorPosition = selectionStart + emoji.length;
+      textArea?.setSelectionRange(nextCursorPosition, nextCursorPosition);
+    });
+  }
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (!isComposerDisabled && messageDraft.trim()) {
+      onMessageSend();
+    }
+  }
 
   return (
     <section className="chat-panel" aria-label="Chat area">
@@ -115,15 +153,42 @@ export function ChatPanel({
         }}
       >
         <div className="composer-input-stack">
+          <div className="composer-tools">
+            <button
+              aria-expanded={isEmojiPickerOpen}
+              className="emoji-toggle-button"
+              disabled={isComposerDisabled}
+              onClick={() => setIsEmojiPickerOpen((isOpen) => !isOpen)}
+              type="button"
+            >
+              🙂
+            </button>
+            {isEmojiPickerOpen ? (
+              <div className="emoji-picker" aria-label="Emoji picker">
+                {EMOJI_OPTIONS.map((emoji) => (
+                  <button
+                    className="emoji-option"
+                    key={emoji}
+                    onClick={() => handleEmojiSelect(emoji)}
+                    type="button"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <textarea
             aria-label="Message text"
             disabled={isComposerDisabled}
+            onKeyDown={handleComposerKeyDown}
             onChange={(event) => onMessageDraftChange(event.target.value)}
             placeholder={
               isComposerDisabled
                 ? "Connect and join a conversation to write"
                 : "Write a message"
             }
+            ref={textAreaRef}
             rows={1}
             value={messageDraft}
           />
