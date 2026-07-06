@@ -238,10 +238,18 @@ export function ChatPanel({
               <div>
                 <span>{selectedFile.name}</span>
                 <small
+                  aria-live="polite"
                   className={`upload-status upload-status--${uploadStatus.state}`}
                 >
                   {uploadStatus.label}
                 </small>
+                {uploadStatus.state === "uploading" ? (
+                  <span
+                    aria-label="Upload in progress"
+                    className="upload-progress"
+                    role="progressbar"
+                  />
+                ) : null}
                 {uploadedAttachment ? (
                   <small className="upload-status">
                     Attachment ID: {uploadedAttachment.id}

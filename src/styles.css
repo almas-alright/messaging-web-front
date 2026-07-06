@@ -506,6 +506,27 @@ textarea {
   color: #a04436;
 }
 
+.upload-progress {
+  background: #dde7e2;
+  border-radius: 999px;
+  display: block;
+  height: 5px;
+  margin-top: 7px;
+  overflow: hidden;
+  position: relative;
+  width: min(220px, 100%);
+}
+
+.upload-progress::after {
+  animation: upload-progress-slide 1s ease-in-out infinite;
+  background: #23765a;
+  border-radius: inherit;
+  content: "";
+  inset: 0 auto 0 0;
+  position: absolute;
+  width: 45%;
+}
+
 .composer-input-stack textarea {
   border: 1px solid #ccd6cf;
   border-radius: 8px;
@@ -658,5 +679,27 @@ li {
 
   .message-bubble {
     max-width: 92%;
+  }
+
+  .selected-file {
+    display: grid;
+  }
+
+  .selected-file__actions {
+    width: 100%;
+  }
+
+  .selected-file__actions button {
+    flex: 1;
+  }
+}
+
+@keyframes upload-progress-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(240%);
   }
 }
