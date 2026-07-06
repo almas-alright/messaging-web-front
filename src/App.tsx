@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createHttpClient } from "./api/httpClient";
+import { loadStoredJwt, saveStoredJwt } from "./auth/demoAuthStorage";
 import { AppShell } from "./components/AppShell";
 import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
@@ -13,7 +14,7 @@ type BackendStatus = {
 
 export function App() {
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
-  const [jwtToken, setJwtToken] = useState("");
+  const [jwtToken, setJwtToken] = useState(() => loadStoredJwt());
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
     state: "idle",
     label: "Not checked",
@@ -22,6 +23,11 @@ export function App() {
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
     saveStoredConfig(nextConfig);
+  }
+
+  function handleJwtTokenChange(nextToken: string) {
+    setJwtToken(nextToken);
+    saveStoredJwt(nextToken);
   }
 
   async function handleHealthCheck() {
@@ -59,7 +65,7 @@ export function App() {
           backendStatus={backendStatus}
           jwtToken={jwtToken}
           onConfigChange={handleConfigChange}
-          onJwtTokenChange={setJwtToken}
+          onJwtTokenChange={handleJwtTokenChange}
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />
