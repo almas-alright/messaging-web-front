@@ -40,3 +40,21 @@ Changes made:
 - Added prerequisites for Node.js, npm, Docker Compose, and backend port `8080`.
 - Added explicit `cp .env.example .env.local` setup in local and LAN flows.
 - Kept Docker static frontend instructions and local test checklist links.
+
+## 11.04 Frontend Backend Config Boundary Review
+
+Reviewed the config, HTTP client, WebSocket client, and demo JWT storage.
+
+Changes made:
+
+- Added `docs/config-boundary.md`.
+- Linked the config boundary document from `README.md`.
+
+Boundary summary:
+
+- Frontend owns configurable API/WebSocket URLs, demo JWT paste/storage, UI
+  state, HTTP requests, and browser WebSocket messages.
+- Backend owns JWT validation, conversation membership, persistence, attachment
+  storage, policy status, and moderation behavior.
+- Login/register/password, production identity integration, production DB setup,
+  and AI remain out of scope for this frontend demo.

@@ -181,6 +181,9 @@ the Ubuntu PC during local testing.
 For a repeatable walkthrough, use
 [docs/local-test-checklist.md](docs/local-test-checklist.md).
 
+For frontend/backend ownership details, see
+[docs/config-boundary.md](docs/config-boundary.md).
+
 ## Frontend Checks
 
 Run:
