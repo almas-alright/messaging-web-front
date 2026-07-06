@@ -14,7 +14,9 @@ type ChatPanelProps = {
   messages: ChatMessage[];
   messageDraft: string;
   isComposerDisabled: boolean;
+  composerNotice: string | null;
   onMessageDraftChange: (message: string) => void;
+  onMessageSend: () => void;
 };
 
 export function ChatPanel({
@@ -25,7 +27,9 @@ export function ChatPanel({
   messages,
   messageDraft,
   isComposerDisabled,
+  composerNotice,
   onMessageDraftChange,
+  onMessageSend,
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
 
@@ -105,20 +109,28 @@ export function ChatPanel({
       <form
         className="composer-shell"
         aria-label="Message composer"
-        onSubmit={(event) => event.preventDefault()}
+        onSubmit={(event) => {
+          event.preventDefault();
+          onMessageSend();
+        }}
       >
-        <textarea
-          aria-label="Message text"
-          disabled={isComposerDisabled}
-          onChange={(event) => onMessageDraftChange(event.target.value)}
-          placeholder={
-            isComposerDisabled
-              ? "Connect and join a conversation to write"
-              : "Write a message"
-          }
-          rows={1}
-          value={messageDraft}
-        />
+        <div className="composer-input-stack">
+          <textarea
+            aria-label="Message text"
+            disabled={isComposerDisabled}
+            onChange={(event) => onMessageDraftChange(event.target.value)}
+            placeholder={
+              isComposerDisabled
+                ? "Connect and join a conversation to write"
+                : "Write a message"
+            }
+            rows={1}
+            value={messageDraft}
+          />
+          {composerNotice ? (
+            <span className="composer-notice">{composerNotice}</span>
+          ) : null}
+        </div>
         <button
           className="composer-send-button"
           disabled={isComposerDisabled || !messageDraft.trim()}

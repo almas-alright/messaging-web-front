@@ -59,6 +59,7 @@ export function App() {
   } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageDraft, setMessageDraft] = useState("");
+  const [composerNotice, setComposerNotice] = useState<string | null>(null);
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -106,6 +107,7 @@ export function App() {
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
+    setComposerNotice(null);
     webSocketRef.current?.disconnect();
     const client = createMessagingWebSocket(config, jwtToken, {
       onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
@@ -129,6 +131,7 @@ export function App() {
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
+    setComposerNotice(null);
     setWebSocketStatus({ state: "idle", label: "Disconnected" });
   }
 
@@ -202,6 +205,29 @@ export function App() {
     });
   }
 
+  function handleMessageSend() {
+    const body = messageDraft.trim();
+
+    if (!joinedConversation || !body) {
+      return;
+    }
+
+    try {
+      webSocketRef.current?.send({
+        type: "message.send",
+        conversation_id: joinedConversation.conversationId,
+        client_message_id: createClientMessageId(),
+        body,
+      });
+      setMessageDraft("");
+      setComposerNotice("Message sent. Waiting for server event.");
+    } catch (error) {
+      setComposerNotice(
+        error instanceof Error ? error.message : "Message send failed",
+      );
+    }
+  }
+
   async function runBackendCheck(
     label: string,
     check: () => Promise<{ status: string; service: string }>,
@@ -257,9 +283,19 @@ export function App() {
           isComposerDisabled={
             webSocketStatus.state !== "connected" || !joinedConversation
           }
+          composerNotice={composerNotice}
           onMessageDraftChange={setMessageDraft}
+          onMessageSend={handleMessageSend}
         />
       </div>
     </AppShell>
   );
+}
+
+function createClientMessageId() {
+  if ("crypto" in window && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
