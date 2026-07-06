@@ -83,11 +83,11 @@
 
 ## Phase 11: Release Candidate Review
 
-- [ ] 11.01 Run build checks
-- [ ] 11.02 Verify backend health/auth/connect/join/send/file flow
-- [ ] 11.03 Review README installation instructions
-- [ ] 11.04 Review frontend/backend config boundary
-- [ ] 11.05 Prepare release notes
+- [x] 11.01 Run build checks
+- [x] 11.02 Verify backend health/auth/connect/join/send/file flow
+- [x] 11.03 Review README installation instructions
+- [x] 11.04 Review frontend/backend config boundary
+- [x] 11.05 Prepare release notes
 
 ## Future Phase 12: Embeddable Widget Research
 
