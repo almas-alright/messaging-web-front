@@ -418,7 +418,7 @@ textarea {
 }
 
 .selected-file {
-  align-items: center;
+  align-items: flex-start;
   background: #f6f8f6;
   border: 1px solid #e3e8e4;
   border-radius: 8px;
@@ -431,10 +431,17 @@ textarea {
 
 .selected-file span {
   color: #52605a;
+  display: block;
   font-size: 0.82rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.selected-file__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
 }
 
 .selected-file button {
@@ -443,6 +450,26 @@ textarea {
   font-weight: 800;
   min-height: 28px;
   padding: 0 10px;
+}
+
+.selected-file button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.upload-status {
+  color: #66736d;
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 3px;
+}
+
+.upload-status--uploaded {
+  color: #23765a;
+}
+
+.upload-status--error {
+  color: #a04436;
 }
 
 .composer-input-stack textarea {

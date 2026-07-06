@@ -1,4 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from "react";
+import type { AttachmentResponse } from "../../api/httpClient";
 import type { ChatMessage, ConnectionState } from "../../types/chat";
 
 const EMOJI_OPTIONS = ["👍", "😊", "😂", "🔥", "🎉", "🙏", "❤️", "✅"];
@@ -17,10 +18,16 @@ type ChatPanelProps = {
   messages: ChatMessage[];
   messageDraft: string;
   selectedFile: File | null;
+  uploadedAttachment: AttachmentResponse | null;
+  uploadStatus: {
+    state: "idle" | "uploading" | "uploaded" | "error";
+    label: string;
+  };
   isComposerDisabled: boolean;
   composerNotice: string | null;
   onMessageDraftChange: (message: string) => void;
   onSelectedFileChange: (file: File | null) => void;
+  onFileUpload: () => void;
   onMessageSend: () => void;
 };
 
@@ -32,10 +39,13 @@ export function ChatPanel({
   messages,
   messageDraft,
   selectedFile,
+  uploadedAttachment,
+  uploadStatus,
   isComposerDisabled,
   composerNotice,
   onMessageDraftChange,
   onSelectedFileChange,
+  onFileUpload,
   onMessageSend,
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
@@ -198,14 +208,38 @@ export function ChatPanel({
           </div>
           {selectedFile ? (
             <div className="selected-file">
-              <span>{selectedFile.name}</span>
-              <button
-                aria-label="Clear selected file"
-                onClick={() => onSelectedFileChange(null)}
-                type="button"
-              >
-                Clear
-              </button>
+              <div>
+                <span>{selectedFile.name}</span>
+                <small
+                  className={`upload-status upload-status--${uploadStatus.state}`}
+                >
+                  {uploadStatus.label}
+                </small>
+                {uploadedAttachment ? (
+                  <small className="upload-status">
+                    Attachment ID: {uploadedAttachment.id}
+                  </small>
+                ) : null}
+              </div>
+              <div className="selected-file__actions">
+                <button
+                  disabled={
+                    isComposerDisabled || uploadStatus.state === "uploading"
+                  }
+                  onClick={onFileUpload}
+                  type="button"
+                >
+                  Upload
+                </button>
+                <button
+                  aria-label="Clear selected file"
+                  disabled={uploadStatus.state === "uploading"}
+                  onClick={() => onSelectedFileChange(null)}
+                  type="button"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
           ) : null}
           <textarea
