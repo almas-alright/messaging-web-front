@@ -1,5 +1,9 @@
 import { useRef, useState } from "react";
-import { createHttpClient, type CurrentUserResponse } from "./api/httpClient";
+import {
+  createHttpClient,
+  type AttachmentResponse,
+  type CurrentUserResponse,
+} from "./api/httpClient";
 import {
   clearStoredJwt,
   loadStoredJwt,
@@ -33,6 +37,11 @@ type WebSocketStatus = {
   label: string;
 };
 
+type UploadStatus = {
+  state: "idle" | "uploading" | "uploaded" | "error";
+  label: string;
+};
+
 export function App() {
   const webSocketRef = useRef<MessagingWebSocket | null>(null);
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
@@ -60,6 +69,16 @@ export function App() {
   } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageDraft, setMessageDraft] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedAttachment, setUploadedAttachment] =
+    useState<AttachmentResponse | null>(null);
+  const [attachmentMetadataById, setAttachmentMetadataById] = useState<
+    Record<string, AttachmentResponse>
+  >({});
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
+    state: "idle",
+    label: "No file uploaded",
+  });
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
 
   function handleConfigChange(nextConfig: AppConfig) {
@@ -77,6 +96,15 @@ export function App() {
     setCurrentUser(null);
     setAuthStatus({ state: "idle", label: "JWT cleared" });
     clearStoredJwt();
+  }
+
+  function handleSelectedFileChange(file: File | null) {
+    setSelectedFile(file);
+    setUploadedAttachment(null);
+    setUploadStatus({
+      state: "idle",
+      label: file ? "File ready to upload" : "No file uploaded",
+    });
   }
 
   async function handleHealthCheck() {
@@ -219,8 +247,9 @@ export function App() {
 
   function handleMessageSend() {
     const body = messageDraft.trim();
+    const attachment = uploadedAttachment;
 
-    if (!joinedConversation || !body) {
+    if (!joinedConversation || (!body && !attachment)) {
       return;
     }
 
@@ -229,14 +258,52 @@ export function App() {
         type: "message.send",
         conversation_id: joinedConversation.conversationId,
         client_message_id: createClientMessageId(),
-        body,
+        body: body || undefined,
+        attachment_id: attachment?.id,
       });
       setMessageDraft("");
+      if (attachment) {
+        setSelectedFile(null);
+        setUploadedAttachment(null);
+        setUploadStatus({ state: "idle", label: "No file uploaded" });
+      }
       setComposerNotice("Message sent. Waiting for server event.");
     } catch (error) {
       setComposerNotice(
         error instanceof Error ? error.message : "Message send failed",
       );
+    }
+  }
+
+  async function handleFileUpload() {
+    if (!selectedFile || !joinedConversation) {
+      return;
+    }
+
+    setUploadStatus({ state: "uploading", label: "Uploading file" });
+    setComposerNotice(null);
+
+    try {
+      const attachment = await createHttpClient(config).uploadAttachment(
+        jwtToken,
+        joinedConversation.conversationId,
+        selectedFile,
+      );
+      setUploadedAttachment(attachment);
+      setAttachmentMetadataById((currentMetadata) => ({
+        ...currentMetadata,
+        [attachment.id]: attachment,
+      }));
+      setUploadStatus({
+        state: "uploaded",
+        label: `Uploaded ${attachment.original_name}`,
+      });
+    } catch (error) {
+      setUploadedAttachment(null);
+      setUploadStatus({
+        state: "error",
+        label: error instanceof Error ? error.message : "File upload failed",
+      });
     }
   }
 
@@ -291,12 +358,20 @@ export function App() {
           conversationId={conversationId}
           joinedConversation={joinedConversation}
           messages={messages}
+          attachmentMetadataById={attachmentMetadataById}
+          attachmentBaseUrl={config.apiBaseUrl}
           messageDraft={messageDraft}
+          selectedFile={selectedFile}
+          uploadedAttachment={uploadedAttachment}
+          uploadStatus={uploadStatus}
+          canSendMessage={Boolean(messageDraft.trim() || uploadedAttachment)}
           isComposerDisabled={
             webSocketStatus.state !== "connected" || !joinedConversation
           }
           composerNotice={composerNotice}
           onMessageDraftChange={setMessageDraft}
+          onSelectedFileChange={handleSelectedFileChange}
+          onFileUpload={handleFileUpload}
           onMessageSend={handleMessageSend}
         />
       </div>

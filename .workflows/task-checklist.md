@@ -67,11 +67,11 @@
 
 ## Phase 09: File Upload And File Message
 
-- [ ] 09.01 Add file picker
-- [ ] 09.02 Upload to `POST /conversations/{id}/attachments`
-- [ ] 09.03 Send file message with `attachment_id`
-- [ ] 09.04 Render file message link/metadata
-- [ ] 09.05 Show upload progress/error state where practical
+- [x] 09.01 Add file picker
+- [x] 09.02 Upload to `POST /conversations/{id}/attachments`
+- [x] 09.03 Send file message with `attachment_id`
+- [x] 09.04 Render file message link/metadata
+- [x] 09.05 Show upload progress/error state where practical
 
 ## Phase 10: Local Network Demo Polish
 

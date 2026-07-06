@@ -1,4 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from "react";
+import type { AttachmentResponse } from "../../api/httpClient";
 import type { ChatMessage, ConnectionState } from "../../types/chat";
 
 const EMOJI_OPTIONS = ["👍", "😊", "😂", "🔥", "🎉", "🙏", "❤️", "✅"];
@@ -15,10 +16,21 @@ type ChatPanelProps = {
     userId: string;
   } | null;
   messages: ChatMessage[];
+  attachmentMetadataById: Record<string, AttachmentResponse>;
+  attachmentBaseUrl: string;
   messageDraft: string;
+  selectedFile: File | null;
+  uploadedAttachment: AttachmentResponse | null;
+  uploadStatus: {
+    state: "idle" | "uploading" | "uploaded" | "error";
+    label: string;
+  };
+  canSendMessage: boolean;
   isComposerDisabled: boolean;
   composerNotice: string | null;
   onMessageDraftChange: (message: string) => void;
+  onSelectedFileChange: (file: File | null) => void;
+  onFileUpload: () => void;
   onMessageSend: () => void;
 };
 
@@ -28,10 +40,18 @@ export function ChatPanel({
   conversationId,
   joinedConversation,
   messages,
+  attachmentMetadataById,
+  attachmentBaseUrl,
   messageDraft,
+  selectedFile,
+  uploadedAttachment,
+  uploadStatus,
+  canSendMessage,
   isComposerDisabled,
   composerNotice,
   onMessageDraftChange,
+  onSelectedFileChange,
+  onFileUpload,
   onMessageSend,
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
@@ -66,7 +86,7 @@ export function ChatPanel({
 
     event.preventDefault();
 
-    if (!isComposerDisabled && messageDraft.trim()) {
+    if (!isComposerDisabled && canSendMessage) {
       onMessageSend();
     }
   }
@@ -131,7 +151,28 @@ export function ChatPanel({
                   isOwnMessage ? "message-bubble--own" : "message-bubble--other"
                 }`}
               >
-                <p>{message.body}</p>
+                {message.body ? <p>{message.body}</p> : null}
+                {message.attachmentId ? (
+                  <a
+                    className="attachment-card"
+                    href={buildAttachmentUrl(
+                      attachmentBaseUrl,
+                      message.attachmentId,
+                    )}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <span>
+                      {attachmentMetadataById[message.attachmentId]
+                        ?.original_name ?? `Attachment ${message.attachmentId}`}
+                    </span>
+                    <small>
+                      {formatAttachmentMeta(
+                        attachmentMetadataById[message.attachmentId],
+                      )}
+                    </small>
+                  </a>
+                ) : null}
                 <footer>
                   <span>{senderLabel}</span>
                   <time dateTime={message.createdAt}>
@@ -177,7 +218,65 @@ export function ChatPanel({
                 ))}
               </div>
             ) : null}
+            <label
+              className={`file-picker-button ${
+                isComposerDisabled ? "file-picker-button--disabled" : ""
+              }`}
+            >
+              <span>Attach file</span>
+              <input
+                disabled={isComposerDisabled}
+                onChange={(event) =>
+                  onSelectedFileChange(event.target.files?.[0] ?? null)
+                }
+                type="file"
+              />
+            </label>
           </div>
+          {selectedFile ? (
+            <div className="selected-file">
+              <div>
+                <span>{selectedFile.name}</span>
+                <small
+                  aria-live="polite"
+                  className={`upload-status upload-status--${uploadStatus.state}`}
+                >
+                  {uploadStatus.label}
+                </small>
+                {uploadStatus.state === "uploading" ? (
+                  <span
+                    aria-label="Upload in progress"
+                    className="upload-progress"
+                    role="progressbar"
+                  />
+                ) : null}
+                {uploadedAttachment ? (
+                  <small className="upload-status">
+                    Attachment ID: {uploadedAttachment.id}
+                  </small>
+                ) : null}
+              </div>
+              <div className="selected-file__actions">
+                <button
+                  disabled={
+                    isComposerDisabled || uploadStatus.state === "uploading"
+                  }
+                  onClick={onFileUpload}
+                  type="button"
+                >
+                  Upload
+                </button>
+                <button
+                  aria-label="Clear selected file"
+                  disabled={uploadStatus.state === "uploading"}
+                  onClick={() => onSelectedFileChange(null)}
+                  type="button"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          ) : null}
           <textarea
             aria-label="Message text"
             disabled={isComposerDisabled}
@@ -198,7 +297,7 @@ export function ChatPanel({
         </div>
         <button
           className="composer-send-button"
-          disabled={isComposerDisabled || !messageDraft.trim()}
+          disabled={isComposerDisabled || !canSendMessage}
           type="submit"
         >
           Send
@@ -223,4 +322,30 @@ function formatMessageTime(value: string) {
 
 function getSenderInitial(senderId: string) {
   return senderId.trim().slice(0, 1).toUpperCase() || "?";
+}
+
+function buildAttachmentUrl(apiBaseUrl: string, attachmentId: string) {
+  return `${apiBaseUrl}/attachments/${encodeURIComponent(attachmentId)}`;
+}
+
+function formatAttachmentMeta(attachment?: AttachmentResponse) {
+  if (!attachment) {
+    return "Attachment metadata endpoint";
+  }
+
+  return `${formatFileSize(attachment.size_bytes)} · ${
+    attachment.mime_type || "file"
+  }`;
+}
+
+function formatFileSize(sizeBytes: number) {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
