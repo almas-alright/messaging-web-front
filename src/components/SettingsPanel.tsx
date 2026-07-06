@@ -16,15 +16,23 @@ type SettingsPanelProps = {
     label: string;
   };
   readyUserId: string | null;
+  joinedConversation: {
+    conversationId: string;
+    userId: string;
+  } | null;
+  conversationId: string;
   jwtToken: string;
   currentUser: CurrentUserResponse | null;
   onConfigChange: (config: AppConfig) => void;
   onJwtTokenChange: (token: string) => void;
   onJwtClear: () => void;
+  onConversationIdChange: (conversationId: string) => void;
   onCheckCurrentUser: () => void;
   onWebSocketConnect: () => void;
   onWebSocketReconnect: () => void;
   onWebSocketDisconnect: () => void;
+  onConversationJoin: () => void;
+  onConversationHistory: () => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
 };
@@ -35,15 +43,20 @@ export function SettingsPanel({
   authStatus,
   webSocketStatus,
   readyUserId,
+  joinedConversation,
+  conversationId,
   jwtToken,
   currentUser,
   onConfigChange,
   onJwtTokenChange,
   onJwtClear,
+  onConversationIdChange,
   onCheckCurrentUser,
   onWebSocketConnect,
   onWebSocketReconnect,
   onWebSocketDisconnect,
+  onConversationJoin,
+  onConversationHistory,
   onCheckHealth,
   onCheckReady,
 }: SettingsPanelProps) {
@@ -138,7 +151,26 @@ export function SettingsPanel({
       </section>
 
       <section className="panel-section">
-        <h2>Coming next</h2>
+        <h2>Conversation</h2>
+        <label className="field">
+          <span>Conversation ID</span>
+          <input
+            type="text"
+            value={conversationId}
+            onChange={(event) => onConversationIdChange(event.target.value)}
+            placeholder="conv-001"
+          />
+        </label>
+        <button
+          className="full-width-button"
+          type="button"
+          onClick={onConversationJoin}
+          disabled={
+            webSocketStatus.state !== "connected" || !conversationId.trim()
+          }
+        >
+          Join conversation
+        </button>
         <button
           className="full-width-button"
           type="button"
@@ -173,9 +205,22 @@ export function SettingsPanel({
             </div>
           </dl>
         ) : null}
+        {joinedConversation ? (
+          <div className="backend-status backend-status--connected">
+            <span>Joined</span>
+            <strong>{joinedConversation.conversationId}</strong>
+          </div>
+        ) : null}
+        <button
+          className="full-width-button"
+          type="button"
+          onClick={onConversationHistory}
+          disabled={!joinedConversation}
+        >
+          Load history
+        </button>
         <ul className="plain-list">
-          <li>Join conversation</li>
-          <li>Load message history</li>
+          <li>Render returned messages</li>
         </ul>
       </section>
     </aside>

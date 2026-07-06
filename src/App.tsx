@@ -15,7 +15,7 @@ import {
   type ServerEvent,
   type MessagingWebSocket,
 } from "./realtime/webSocketClient";
-import type { ConnectionState } from "./types/chat";
+import type { ChatMessage, ConnectionState } from "./types/chat";
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -52,6 +52,12 @@ export function App() {
     label: "Not connected",
   });
   const [readyUserId, setReadyUserId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState("conv-001");
+  const [joinedConversation, setJoinedConversation] = useState<{
+    conversationId: string;
+    userId: string;
+  } | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -97,6 +103,8 @@ export function App() {
   function handleWebSocketConnect() {
     setWebSocketStatus({ state: "connecting", label: "Connecting" });
     setReadyUserId(null);
+    setJoinedConversation(null);
+    setMessages([]);
     webSocketRef.current?.disconnect();
     const client = createMessagingWebSocket(config, jwtToken, {
       onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
@@ -118,6 +126,8 @@ export function App() {
     webSocketRef.current?.disconnect();
     webSocketRef.current = null;
     setReadyUserId(null);
+    setJoinedConversation(null);
+    setMessages([]);
     setWebSocketStatus({ state: "idle", label: "Disconnected" });
   }
 
@@ -132,7 +142,63 @@ export function App() {
         state: "connected",
         label: `Ready as ${event.user_id}`,
       });
+      return;
     }
+    if (
+      event.type === "conversation.joined" &&
+      "conversation_id" in event &&
+      typeof event.conversation_id === "string" &&
+      "user_id" in event &&
+      typeof event.user_id === "string"
+    ) {
+      setJoinedConversation({
+        conversationId: event.conversation_id,
+        userId: event.user_id,
+      });
+      return;
+    }
+    if (
+      event.type === "conversation.messages" &&
+      "messages" in event &&
+      Array.isArray(event.messages)
+    ) {
+      setMessages(event.messages.map(messageFromServer));
+    }
+  }
+
+  function messageFromServer(event: {
+    message_id: string;
+    conversation_id: string;
+    sender_id: string;
+    body: string;
+    created_at: string;
+    attachment_id?: string;
+  }): ChatMessage {
+    return {
+      id: event.message_id,
+      conversationId: event.conversation_id,
+      senderId: event.sender_id,
+      body: event.body,
+      createdAt: event.created_at,
+      attachmentId: event.attachment_id,
+    };
+  }
+
+  function handleConversationJoin() {
+    webSocketRef.current?.send({
+      type: "conversation.join",
+      conversation_id: conversationId.trim(),
+    });
+  }
+
+  function handleConversationHistory() {
+    if (!joinedConversation) {
+      return;
+    }
+    webSocketRef.current?.send({
+      type: "conversation.history",
+      conversation_id: joinedConversation.conversationId,
+    });
   }
 
   async function runBackendCheck(
@@ -163,19 +229,30 @@ export function App() {
           authStatus={authStatus}
           webSocketStatus={webSocketStatus}
           readyUserId={readyUserId}
+          joinedConversation={joinedConversation}
+          conversationId={conversationId}
           jwtToken={jwtToken}
           currentUser={currentUser}
           onConfigChange={handleConfigChange}
           onJwtTokenChange={handleJwtTokenChange}
           onJwtClear={handleJwtClear}
+          onConversationIdChange={setConversationId}
           onCheckCurrentUser={handleCurrentUserCheck}
           onWebSocketConnect={handleWebSocketConnect}
           onWebSocketReconnect={handleWebSocketReconnect}
           onWebSocketDisconnect={handleWebSocketDisconnect}
+          onConversationJoin={handleConversationJoin}
+          onConversationHistory={handleConversationHistory}
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />
-        <ChatPanel connectionState={webSocketStatus} readyUserId={readyUserId} />
+        <ChatPanel
+          connectionState={webSocketStatus}
+          readyUserId={readyUserId}
+          conversationId={conversationId}
+          joinedConversation={joinedConversation}
+          messages={messages}
+        />
       </div>
     </AppShell>
   );
