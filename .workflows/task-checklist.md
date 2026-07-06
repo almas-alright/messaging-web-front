@@ -56,7 +56,7 @@
 - [x] 07.03 Add message composer
 - [x] 07.04 Send `message.send`
 - [x] 07.05 Render realtime `message.created`
-- [ ] 07.06 Add responsive mobile-friendly layout
+- [x] 07.06 Add responsive mobile-friendly layout
 
 ## Phase 08: Emoji Support
 

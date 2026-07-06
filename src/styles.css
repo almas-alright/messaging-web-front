@@ -58,7 +58,7 @@ textarea {
 .demo-layout {
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 340px) minmax(420px, 1fr);
   min-height: calc(100vh - 124px);
 }
 
@@ -201,6 +201,7 @@ textarea {
 
 .chat-panel {
   display: grid;
+  height: calc(100vh - 124px);
   grid-template-rows: auto minmax(320px, 1fr) auto;
   min-width: 0;
   overflow: hidden;
@@ -236,6 +237,7 @@ textarea {
   gap: 10px;
   overflow: auto;
   padding: 20px;
+  scrollbar-gutter: stable;
 }
 
 .message-row {
@@ -275,6 +277,7 @@ textarea {
 
 .message-bubble p {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .message-bubble footer {
@@ -449,6 +452,7 @@ li {
   .app-header {
     align-items: flex-start;
     gap: 12px;
+    flex-direction: column;
   }
 
   .demo-layout {
@@ -457,6 +461,42 @@ li {
   }
 
   .chat-panel {
+    height: min(680px, calc(100vh - 24px));
     min-height: 560px;
+  }
+
+  .chat-panel__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .message-bubble {
+    max-width: min(520px, 88%);
+  }
+}
+
+@media (max-width: 520px) {
+  .button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-send-button {
+    width: 100%;
+  }
+
+  .message-list {
+    padding: 14px;
+  }
+
+  .message-avatar {
+    display: none;
+  }
+
+  .message-bubble {
+    max-width: 92%;
   }
 }
