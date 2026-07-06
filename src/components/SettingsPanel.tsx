@@ -21,20 +21,25 @@ export function SettingsPanel({ config, onConfigChange }: SettingsPanelProps) {
             placeholder="http://localhost:8080"
           />
         </label>
-        <dl className="config-list">
-          <div>
-            <dt>WebSocket URL</dt>
-            <dd>{config.wsBaseUrl}</dd>
-          </div>
-        </dl>
+        <label className="field">
+          <span>WebSocket URL</span>
+          <input
+            type="url"
+            value={config.wsBaseUrl}
+            onChange={(event) =>
+              onConfigChange({ ...config, wsBaseUrl: event.target.value })
+            }
+            placeholder="ws://localhost:8080/ws"
+          />
+        </label>
       </section>
 
       <section className="panel-section">
         <h2>Coming next</h2>
         <ul className="plain-list">
-          <li>Editable WebSocket URL</li>
           <li>Manual JWT paste</li>
           <li>Health and readiness checks</li>
+          <li>Saved local demo settings</li>
         </ul>
       </section>
     </aside>
