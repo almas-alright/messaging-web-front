@@ -233,6 +233,13 @@ textarea {
   margin: 0;
 }
 
+.message-bubble small {
+  color: #6d7872;
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 6px;
+}
+
 .message-bubble--other {
   background: #ffffff;
   border: 1px solid #e3e8e4;
@@ -241,6 +248,10 @@ textarea {
 .message-bubble--own {
   background: #dff3e9;
   justify-self: end;
+}
+
+.message-bubble--own small {
+  text-align: right;
 }
 
 .message-bubble--system {

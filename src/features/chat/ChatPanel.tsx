@@ -1,4 +1,4 @@
-import type { ConnectionState } from "../../types/chat";
+import type { ChatMessage, ConnectionState } from "../../types/chat";
 
 type ChatPanelProps = {
   connectionState: {
@@ -11,6 +11,7 @@ type ChatPanelProps = {
     conversationId: string;
     userId: string;
   } | null;
+  messages: ChatMessage[];
 };
 
 export function ChatPanel({
@@ -18,6 +19,7 @@ export function ChatPanel({
   readyUserId,
   conversationId,
   joinedConversation,
+  messages,
 }: ChatPanelProps) {
   return (
     <section className="chat-panel" aria-label="Chat area">
@@ -51,6 +53,19 @@ export function ChatPanel({
             </p>
           </article>
         ) : null}
+        {messages.map((message) => (
+          <article
+            className={`message-bubble ${
+              message.senderId === readyUserId
+                ? "message-bubble--own"
+                : "message-bubble--other"
+            }`}
+            key={message.id}
+          >
+            <p>{message.body}</p>
+            <small>{message.senderId}</small>
+          </article>
+        ))}
       </div>
 
       <div className="composer-shell" aria-label="Message composer preview">

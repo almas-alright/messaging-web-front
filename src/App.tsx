@@ -15,7 +15,7 @@ import {
   type ServerEvent,
   type MessagingWebSocket,
 } from "./realtime/webSocketClient";
-import type { ConnectionState } from "./types/chat";
+import type { ChatMessage, ConnectionState } from "./types/chat";
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -57,6 +57,7 @@ export function App() {
     conversationId: string;
     userId: string;
   } | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -103,6 +104,7 @@ export function App() {
     setWebSocketStatus({ state: "connecting", label: "Connecting" });
     setReadyUserId(null);
     setJoinedConversation(null);
+    setMessages([]);
     webSocketRef.current?.disconnect();
     const client = createMessagingWebSocket(config, jwtToken, {
       onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
@@ -125,6 +127,7 @@ export function App() {
     webSocketRef.current = null;
     setReadyUserId(null);
     setJoinedConversation(null);
+    setMessages([]);
     setWebSocketStatus({ state: "idle", label: "Disconnected" });
   }
 
@@ -152,7 +155,33 @@ export function App() {
         conversationId: event.conversation_id,
         userId: event.user_id,
       });
+      return;
     }
+    if (
+      event.type === "conversation.messages" &&
+      "messages" in event &&
+      Array.isArray(event.messages)
+    ) {
+      setMessages(event.messages.map(messageFromServer));
+    }
+  }
+
+  function messageFromServer(event: {
+    message_id: string;
+    conversation_id: string;
+    sender_id: string;
+    body: string;
+    created_at: string;
+    attachment_id?: string;
+  }): ChatMessage {
+    return {
+      id: event.message_id,
+      conversationId: event.conversation_id,
+      senderId: event.sender_id,
+      body: event.body,
+      createdAt: event.created_at,
+      attachmentId: event.attachment_id,
+    };
   }
 
   function handleConversationJoin() {
@@ -222,6 +251,7 @@ export function App() {
           readyUserId={readyUserId}
           conversationId={conversationId}
           joinedConversation={joinedConversation}
+          messages={messages}
         />
       </div>
     </AppShell>

@@ -43,11 +43,11 @@
 
 ## Phase 06: Conversation Join And History
 
-- [ ] 06.01 Add conversation ID input
-- [ ] 06.02 Send `conversation.join`
-- [ ] 06.03 Show joined conversation state
-- [ ] 06.04 Send `conversation.history`
-- [ ] 06.05 Render `conversation.messages`
+- [x] 06.01 Add conversation ID input
+- [x] 06.02 Send `conversation.join`
+- [x] 06.03 Show joined conversation state
+- [x] 06.04 Send `conversation.history`
+- [x] 06.05 Render `conversation.messages`
 
 ## Phase 07: WhatsApp-Like Chat UI
 
