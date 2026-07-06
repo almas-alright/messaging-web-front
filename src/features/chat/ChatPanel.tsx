@@ -5,9 +5,10 @@ type ChatPanelProps = {
     state: ConnectionState;
     label: string;
   };
+  readyUserId: string | null;
 };
 
-export function ChatPanel({ connectionState }: ChatPanelProps) {
+export function ChatPanel({ connectionState, readyUserId }: ChatPanelProps) {
   return (
     <section className="chat-panel" aria-label="Chat area">
       <div className="chat-panel__header">
@@ -27,6 +28,11 @@ export function ChatPanel({ connectionState }: ChatPanelProps) {
         <article className="message-bubble message-bubble--own">
           <p>Then JWT, WebSocket, history, send, emoji, and files.</p>
         </article>
+        {readyUserId ? (
+          <article className="message-bubble message-bubble--system">
+            <p>WebSocket accepted JWT for {readyUserId}.</p>
+          </article>
+        ) : null}
       </div>
 
       <div className="composer-shell" aria-label="Message composer preview">

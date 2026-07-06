@@ -243,6 +243,13 @@ textarea {
   justify-self: end;
 }
 
+.message-bubble--system {
+  background: #eef3f1;
+  color: #52605a;
+  justify-self: center;
+  text-align: center;
+}
+
 .composer-shell {
   border-top: 1px solid #e3e8e4;
   color: #6d7872;

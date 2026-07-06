@@ -12,6 +12,7 @@ import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
 import {
   createMessagingWebSocket,
+  type ServerEvent,
   type MessagingWebSocket,
 } from "./realtime/webSocketClient";
 import type { ConnectionState } from "./types/chat";
@@ -50,6 +51,7 @@ export function App() {
     state: "idle",
     label: "Not connected",
   });
+  const [readyUserId, setReadyUserId] = useState<string | null>(null);
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -94,9 +96,11 @@ export function App() {
 
   function handleWebSocketConnect() {
     setWebSocketStatus({ state: "connecting", label: "Connecting" });
+    setReadyUserId(null);
     webSocketRef.current?.disconnect();
     const client = createMessagingWebSocket(config, jwtToken, {
       onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
+      onMessage: handleWebSocketMessage,
       onClose: () =>
         setWebSocketStatus({ state: "idle", label: "Disconnected" }),
       onError: () =>
@@ -104,6 +108,16 @@ export function App() {
     });
     webSocketRef.current = client;
     client.connect();
+  }
+
+  function handleWebSocketMessage(event: ServerEvent) {
+    if (event.type === "connection.ready" && "user_id" in event && typeof event.user_id === "string") {
+      setReadyUserId(event.user_id);
+      setWebSocketStatus({
+        state: "connected",
+        label: `Ready as ${event.user_id}`,
+      });
+    }
   }
 
   async function runBackendCheck(
@@ -133,6 +147,7 @@ export function App() {
           backendStatus={backendStatus}
           authStatus={authStatus}
           webSocketStatus={webSocketStatus}
+          readyUserId={readyUserId}
           jwtToken={jwtToken}
           currentUser={currentUser}
           onConfigChange={handleConfigChange}
@@ -143,7 +158,7 @@ export function App() {
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />
-        <ChatPanel connectionState={webSocketStatus} />
+        <ChatPanel connectionState={webSocketStatus} readyUserId={readyUserId} />
       </div>
     </AppShell>
   );

@@ -15,6 +15,7 @@ type SettingsPanelProps = {
     state: "idle" | "connecting" | "connected" | "error";
     label: string;
   };
+  readyUserId: string | null;
   jwtToken: string;
   currentUser: CurrentUserResponse | null;
   onConfigChange: (config: AppConfig) => void;
@@ -31,6 +32,7 @@ export function SettingsPanel({
   backendStatus,
   authStatus,
   webSocketStatus,
+  readyUserId,
   jwtToken,
   currentUser,
   onConfigChange,
@@ -147,8 +149,15 @@ export function SettingsPanel({
           <span>WebSocket</span>
           <strong>{webSocketStatus.label}</strong>
         </div>
+        {readyUserId ? (
+          <dl className="config-list">
+            <div>
+              <dt>Ready user</dt>
+              <dd>{readyUserId}</dd>
+            </div>
+          </dl>
+        ) : null}
         <ul className="plain-list">
-          <li>Ready event handling</li>
           <li>File upload uses JWT later as bearer auth</li>
         </ul>
       </section>
