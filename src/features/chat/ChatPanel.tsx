@@ -1,4 +1,7 @@
+import { useState } from "react";
 import type { ChatMessage, ConnectionState } from "../../types/chat";
+
+const EMOJI_OPTIONS = ["👍", "😊", "😂", "🔥", "🎉", "🙏", "❤️", "✅"];
 
 type ChatPanelProps = {
   connectionState: {
@@ -32,6 +35,7 @@ export function ChatPanel({
   onMessageSend,
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
   return (
     <section className="chat-panel" aria-label="Chat area">
@@ -115,6 +119,26 @@ export function ChatPanel({
         }}
       >
         <div className="composer-input-stack">
+          <div className="composer-tools">
+            <button
+              aria-expanded={isEmojiPickerOpen}
+              className="emoji-toggle-button"
+              disabled={isComposerDisabled}
+              onClick={() => setIsEmojiPickerOpen((isOpen) => !isOpen)}
+              type="button"
+            >
+              🙂
+            </button>
+            {isEmojiPickerOpen ? (
+              <div className="emoji-picker" aria-label="Emoji picker">
+                {EMOJI_OPTIONS.map((emoji) => (
+                  <button className="emoji-option" key={emoji} type="button">
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <textarea
             aria-label="Message text"
             disabled={isComposerDisabled}
