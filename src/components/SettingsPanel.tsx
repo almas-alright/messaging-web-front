@@ -32,6 +32,7 @@ type SettingsPanelProps = {
   onWebSocketReconnect: () => void;
   onWebSocketDisconnect: () => void;
   onConversationJoin: () => void;
+  onConversationHistory: () => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
 };
@@ -55,6 +56,7 @@ export function SettingsPanel({
   onWebSocketReconnect,
   onWebSocketDisconnect,
   onConversationJoin,
+  onConversationHistory,
   onCheckHealth,
   onCheckReady,
 }: SettingsPanelProps) {
@@ -209,8 +211,16 @@ export function SettingsPanel({
             <strong>{joinedConversation.conversationId}</strong>
           </div>
         ) : null}
+        <button
+          className="full-width-button"
+          type="button"
+          onClick={onConversationHistory}
+          disabled={!joinedConversation}
+        >
+          Load history
+        </button>
         <ul className="plain-list">
-          <li>Load message history</li>
+          <li>Render returned messages</li>
         </ul>
       </section>
     </aside>
