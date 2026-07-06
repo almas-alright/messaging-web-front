@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createHttpClient } from "./api/httpClient";
+import { createHttpClient, type CurrentUserResponse } from "./api/httpClient";
 import { loadStoredJwt, saveStoredJwt } from "./auth/demoAuthStorage";
 import { AppShell } from "./components/AppShell";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -12,6 +12,11 @@ type BackendStatus = {
   label: string;
 };
 
+type AuthStatus = {
+  state: "idle" | "checking" | "ok" | "error";
+  label: string;
+};
+
 export function App() {
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
   const [jwtToken, setJwtToken] = useState(() => loadStoredJwt());
@@ -19,6 +24,13 @@ export function App() {
     state: "idle",
     label: "Not checked",
   });
+  const [authStatus, setAuthStatus] = useState<AuthStatus>({
+    state: "idle",
+    label: "JWT not checked",
+  });
+  const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(
+    null,
+  );
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -39,7 +51,19 @@ export function App() {
   }
 
   async function handleCurrentUserCheck() {
-    await createHttpClient(config).getCurrentUser(jwtToken);
+    setAuthStatus({ state: "checking", label: "Checking JWT" });
+    setCurrentUser(null);
+    try {
+      const user = await createHttpClient(config).getCurrentUser(jwtToken);
+      setCurrentUser(user);
+      setAuthStatus({ state: "ok", label: "JWT accepted" });
+    } catch (error) {
+      setAuthStatus({
+        state: "error",
+        label:
+          error instanceof Error ? error.message : "Current user check failed",
+      });
+    }
   }
 
   async function runBackendCheck(
@@ -67,7 +91,9 @@ export function App() {
         <SettingsPanel
           config={config}
           backendStatus={backendStatus}
+          authStatus={authStatus}
           jwtToken={jwtToken}
+          currentUser={currentUser}
           onConfigChange={handleConfigChange}
           onJwtTokenChange={handleJwtTokenChange}
           onCheckCurrentUser={handleCurrentUserCheck}

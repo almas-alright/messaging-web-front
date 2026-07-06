@@ -1,4 +1,5 @@
 import type { AppConfig } from "../config/env";
+import type { CurrentUserResponse } from "../api/httpClient";
 
 type SettingsPanelProps = {
   config: AppConfig;
@@ -6,7 +7,12 @@ type SettingsPanelProps = {
     state: "idle" | "checking" | "ok" | "error";
     label: string;
   };
+  authStatus: {
+    state: "idle" | "checking" | "ok" | "error";
+    label: string;
+  };
   jwtToken: string;
+  currentUser: CurrentUserResponse | null;
   onConfigChange: (config: AppConfig) => void;
   onJwtTokenChange: (token: string) => void;
   onCheckCurrentUser: () => void;
@@ -17,7 +23,9 @@ type SettingsPanelProps = {
 export function SettingsPanel({
   config,
   backendStatus,
+  authStatus,
   jwtToken,
+  currentUser,
   onConfigChange,
   onJwtTokenChange,
   onCheckCurrentUser,
@@ -84,6 +92,26 @@ export function SettingsPanel({
         >
           Check current user
         </button>
+        <div className={`backend-status backend-status--${authStatus.state}`}>
+          <span>Auth</span>
+          <strong>{authStatus.label}</strong>
+        </div>
+        {currentUser ? (
+          <dl className="config-list">
+            <div>
+              <dt>User ID</dt>
+              <dd>{currentUser.user_id}</dd>
+            </div>
+            <div>
+              <dt>Display name</dt>
+              <dd>{currentUser.display_name}</dd>
+            </div>
+            <div>
+              <dt>Role</dt>
+              <dd>{currentUser.role}</dd>
+            </div>
+          </dl>
+        ) : null}
       </section>
 
       <section className="panel-section">
