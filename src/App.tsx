@@ -136,6 +136,13 @@ export function App() {
     }
   }
 
+  function handleConversationJoin() {
+    webSocketRef.current?.send({
+      type: "conversation.join",
+      conversation_id: conversationId.trim(),
+    });
+  }
+
   async function runBackendCheck(
     label: string,
     check: () => Promise<{ status: string; service: string }>,
@@ -175,6 +182,7 @@ export function App() {
           onWebSocketConnect={handleWebSocketConnect}
           onWebSocketReconnect={handleWebSocketReconnect}
           onWebSocketDisconnect={handleWebSocketDisconnect}
+          onConversationJoin={handleConversationJoin}
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />
