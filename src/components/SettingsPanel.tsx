@@ -1,4 +1,5 @@
 import type { AppConfig } from "../config/env";
+import type { CurrentUserResponse } from "../api/httpClient";
 
 type SettingsPanelProps = {
   config: AppConfig;
@@ -6,7 +7,16 @@ type SettingsPanelProps = {
     state: "idle" | "checking" | "ok" | "error";
     label: string;
   };
+  authStatus: {
+    state: "idle" | "checking" | "ok" | "error";
+    label: string;
+  };
+  jwtToken: string;
+  currentUser: CurrentUserResponse | null;
   onConfigChange: (config: AppConfig) => void;
+  onJwtTokenChange: (token: string) => void;
+  onJwtClear: () => void;
+  onCheckCurrentUser: () => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
 };
@@ -14,7 +24,13 @@ type SettingsPanelProps = {
 export function SettingsPanel({
   config,
   backendStatus,
+  authStatus,
+  jwtToken,
+  currentUser,
   onConfigChange,
+  onJwtTokenChange,
+  onJwtClear,
+  onCheckCurrentUser,
   onCheckHealth,
   onCheckReady,
 }: SettingsPanelProps) {
@@ -59,11 +75,60 @@ export function SettingsPanel({
       </section>
 
       <section className="panel-section">
+        <h2>Demo JWT</h2>
+        <label className="field">
+          <span>Paste token</span>
+          <textarea
+            value={jwtToken}
+            onChange={(event) => onJwtTokenChange(event.target.value)}
+            placeholder="Paste manually generated JWT"
+            rows={5}
+            spellCheck={false}
+          />
+        </label>
+        <button
+          className="full-width-button"
+          type="button"
+          onClick={onCheckCurrentUser}
+          disabled={!jwtToken.trim()}
+        >
+          Check current user
+        </button>
+        <button
+          className="full-width-button full-width-button--secondary"
+          type="button"
+          onClick={onJwtClear}
+          disabled={!jwtToken.trim() && !currentUser}
+        >
+          Clear demo JWT
+        </button>
+        <div className={`backend-status backend-status--${authStatus.state}`}>
+          <span>Auth</span>
+          <strong>{authStatus.label}</strong>
+        </div>
+        {currentUser ? (
+          <dl className="config-list">
+            <div>
+              <dt>User ID</dt>
+              <dd>{currentUser.user_id}</dd>
+            </div>
+            <div>
+              <dt>Display name</dt>
+              <dd>{currentUser.display_name}</dd>
+            </div>
+            <div>
+              <dt>Role</dt>
+              <dd>{currentUser.role}</dd>
+            </div>
+          </dl>
+        ) : null}
+      </section>
+
+      <section className="panel-section">
         <h2>Coming next</h2>
         <ul className="plain-list">
-          <li>Manual JWT paste</li>
-          <li>Authenticated current user</li>
-          <li>Saved local demo settings</li>
+          <li>WebSocket uses JWT later as token query</li>
+          <li>File upload uses JWT later as bearer auth</li>
         </ul>
       </section>
     </aside>

@@ -27,11 +27,11 @@
 
 ## Phase 04: JWT Demo Auth
 
-- [ ] 04.01 Add JWT textarea
-- [ ] 04.02 Persist JWT in local storage for demo
-- [ ] 04.03 Add `/auth/me` API call
-- [ ] 04.04 Show current user display name and role
-- [ ] 04.05 Add clear/reset demo auth action
+- [x] 04.01 Add JWT textarea
+- [x] 04.02 Persist JWT in local storage for demo
+- [x] 04.03 Add `/auth/me` API call
+- [x] 04.04 Show current user display name and role
+- [x] 04.05 Add clear/reset demo auth action
 
 ## Phase 05: WebSocket Connection
 
