@@ -51,12 +51,12 @@
 
 ## Phase 07: WhatsApp-Like Chat UI
 
-- [ ] 07.01 Add message list layout
-- [ ] 07.02 Add own/other message bubbles
-- [ ] 07.03 Add message composer
-- [ ] 07.04 Send `message.send`
-- [ ] 07.05 Render realtime `message.created`
-- [ ] 07.06 Add responsive mobile-friendly layout
+- [x] 07.01 Add message list layout
+- [x] 07.02 Add own/other message bubbles
+- [x] 07.03 Add message composer
+- [x] 07.04 Send `message.send`
+- [x] 07.05 Render realtime `message.created`
+- [x] 07.06 Add responsive mobile-friendly layout
 
 ## Phase 08: Emoji Support
 

@@ -12,6 +12,11 @@ type ChatPanelProps = {
     userId: string;
   } | null;
   messages: ChatMessage[];
+  messageDraft: string;
+  isComposerDisabled: boolean;
+  composerNotice: string | null;
+  onMessageDraftChange: (message: string) => void;
+  onMessageSend: () => void;
 };
 
 export function ChatPanel({
@@ -20,57 +25,137 @@ export function ChatPanel({
   conversationId,
   joinedConversation,
   messages,
+  messageDraft,
+  isComposerDisabled,
+  composerNotice,
+  onMessageDraftChange,
+  onMessageSend,
 }: ChatPanelProps) {
+  const hasMessages = messages.length > 0;
+
   return (
     <section className="chat-panel" aria-label="Chat area">
       <div className="chat-panel__header">
         <div>
           <p className="eyebrow">Conversation</p>
           <h2>{conversationId || "No conversation"}</h2>
+          <p className="chat-panel__subtitle">
+            {joinedConversation
+              ? `Joined as ${joinedConversation.userId}`
+              : "Join a conversation to load history"}
+          </p>
         </div>
-        <span className={`connection-dot connection-dot--${connectionState.state}`}>
+        <span
+          className={`connection-dot connection-dot--${connectionState.state}`}
+        >
           {connectionState.label}
         </span>
       </div>
 
       <div className="message-list" aria-label="Messages">
-        <article className="message-bubble message-bubble--other">
-          <p>Backend configuration lands in the next phase.</p>
-        </article>
-        <article className="message-bubble message-bubble--own">
-          <p>Then JWT, WebSocket, history, send, emoji, and files.</p>
-        </article>
         {readyUserId ? (
-          <article className="message-bubble message-bubble--system">
+          <article className="timeline-status">
             <p>WebSocket accepted JWT for {readyUserId}.</p>
           </article>
         ) : null}
         {joinedConversation ? (
-          <article className="message-bubble message-bubble--system">
+          <article className="timeline-status">
             <p>
               Joined {joinedConversation.conversationId} as{" "}
               {joinedConversation.userId}.
             </p>
           </article>
         ) : null}
-        {messages.map((message) => (
-          <article
-            className={`message-bubble ${
-              message.senderId === readyUserId
-                ? "message-bubble--own"
-                : "message-bubble--other"
-            }`}
-            key={message.id}
-          >
-            <p>{message.body}</p>
-            <small>{message.senderId}</small>
+        {!hasMessages ? (
+          <article className="message-empty-state">
+            <strong>No messages loaded yet</strong>
+            <span>Join a conversation, then load history to begin.</span>
           </article>
-        ))}
+        ) : null}
+        {messages.map((message) => {
+          const isOwnMessage = message.senderId === readyUserId;
+          const senderLabel = isOwnMessage ? "You" : message.senderId;
+
+          return (
+            <article
+              className={`message-row ${
+                isOwnMessage ? "message-row--own" : "message-row--other"
+              }`}
+              key={message.id}
+            >
+              {!isOwnMessage ? (
+                <span className="message-avatar" aria-hidden="true">
+                  {getSenderInitial(message.senderId)}
+                </span>
+              ) : null}
+              <div
+                className={`message-bubble ${
+                  isOwnMessage ? "message-bubble--own" : "message-bubble--other"
+                }`}
+              >
+                <p>{message.body}</p>
+                <footer>
+                  <span>{senderLabel}</span>
+                  <time dateTime={message.createdAt}>
+                    {formatMessageTime(message.createdAt)}
+                  </time>
+                </footer>
+              </div>
+            </article>
+          );
+        })}
       </div>
 
-      <div className="composer-shell" aria-label="Message composer preview">
-        <span>Message composer placeholder</span>
-      </div>
+      <form
+        className="composer-shell"
+        aria-label="Message composer"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onMessageSend();
+        }}
+      >
+        <div className="composer-input-stack">
+          <textarea
+            aria-label="Message text"
+            disabled={isComposerDisabled}
+            onChange={(event) => onMessageDraftChange(event.target.value)}
+            placeholder={
+              isComposerDisabled
+                ? "Connect and join a conversation to write"
+                : "Write a message"
+            }
+            rows={1}
+            value={messageDraft}
+          />
+          {composerNotice ? (
+            <span className="composer-notice">{composerNotice}</span>
+          ) : null}
+        </div>
+        <button
+          className="composer-send-button"
+          disabled={isComposerDisabled || !messageDraft.trim()}
+          type="submit"
+        >
+          Send
+        </button>
+      </form>
     </section>
   );
+}
+
+function formatMessageTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function getSenderInitial(senderId: string) {
+  return senderId.trim().slice(0, 1).toUpperCase() || "?";
 }

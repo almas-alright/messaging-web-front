@@ -58,7 +58,7 @@ textarea {
 .demo-layout {
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 340px) minmax(420px, 1fr);
   min-height: calc(100vh - 124px);
 }
 
@@ -201,6 +201,7 @@ textarea {
 
 .chat-panel {
   display: grid;
+  height: calc(100vh - 124px);
   grid-template-rows: auto minmax(320px, 1fr) auto;
   min-width: 0;
   overflow: hidden;
@@ -210,62 +211,175 @@ textarea {
   align-items: center;
   border-bottom: 1px solid #e3e8e4;
   display: flex;
+  gap: 16px;
   justify-content: space-between;
   padding: 18px 20px;
 }
 
+.chat-panel__subtitle {
+  color: #66736d;
+  font-size: 0.9rem;
+  margin: 6px 0 0;
+}
+
 .message-list {
   align-content: end;
-  background: #f6f8f6;
+  background:
+    linear-gradient(rgba(247, 249, 247, 0.92), rgba(247, 249, 247, 0.92)),
+    repeating-linear-gradient(
+      135deg,
+      #e8efeb 0,
+      #e8efeb 1px,
+      transparent 1px,
+      transparent 22px
+    );
   display: grid;
-  gap: 12px;
+  gap: 10px;
   overflow: auto;
   padding: 20px;
+  scrollbar-gutter: stable;
+}
+
+.message-row {
+  align-items: end;
+  display: flex;
+  gap: 8px;
+}
+
+.message-row--own {
+  justify-content: flex-end;
+}
+
+.message-row--other {
+  justify-content: flex-start;
+}
+
+.message-avatar {
+  align-items: center;
+  background: #2f5f73;
+  border-radius: 50%;
+  color: #ffffff;
+  display: inline-flex;
+  flex: 0 0 30px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
 }
 
 .message-bubble {
-  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(22, 32, 28, 0.06);
+  line-height: 1.45;
   max-width: min(560px, 82%);
   padding: 12px 14px;
 }
 
 .message-bubble p {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
-.message-bubble small {
+.message-bubble footer {
+  align-items: center;
   color: #6d7872;
-  display: block;
+  display: flex;
   font-size: 0.75rem;
+  gap: 10px;
+  justify-content: space-between;
   margin-top: 6px;
+  min-width: 132px;
 }
 
 .message-bubble--other {
   background: #ffffff;
   border: 1px solid #e3e8e4;
+  border-radius: 8px 8px 8px 3px;
 }
 
 .message-bubble--own {
-  background: #dff3e9;
-  justify-self: end;
+  background: #dcf4ea;
+  border: 1px solid #c5e6d7;
+  border-radius: 8px 8px 3px 8px;
 }
 
-.message-bubble--own small {
-  text-align: right;
-}
-
-.message-bubble--system {
+.timeline-status,
+.message-empty-state {
   background: #eef3f1;
+  border: 1px solid #dde7e2;
+  border-radius: 8px;
   color: #52605a;
   justify-self: center;
+  max-width: min(520px, 100%);
+  padding: 10px 12px;
   text-align: center;
 }
 
-.composer-shell {
-  border-top: 1px solid #e3e8e4;
+.timeline-status p,
+.message-empty-state strong,
+.message-empty-state span {
+  margin: 0;
+}
+
+.message-empty-state {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+}
+
+.message-empty-state span {
   color: #6d7872;
+}
+
+.composer-shell {
+  align-items: end;
+  border-top: 1px solid #e3e8e4;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
   min-height: 72px;
-  padding: 18px 20px;
+  padding: 14px 16px;
+}
+
+.composer-input-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.composer-input-stack textarea {
+  border: 1px solid #ccd6cf;
+  border-radius: 8px;
+  max-height: 140px;
+  min-height: 44px;
+  outline: none;
+  padding: 11px 12px;
+  resize: vertical;
+}
+
+.composer-input-stack textarea:focus {
+  border-color: #23765a;
+  box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.12);
+}
+
+.composer-notice {
+  color: #66736d;
+  font-size: 0.78rem;
+}
+
+.composer-send-button {
+  background: #23765a;
+  border: 1px solid #23765a;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.composer-send-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .eyebrow {
@@ -338,6 +452,7 @@ li {
   .app-header {
     align-items: flex-start;
     gap: 12px;
+    flex-direction: column;
   }
 
   .demo-layout {
@@ -346,6 +461,42 @@ li {
   }
 
   .chat-panel {
+    height: min(680px, calc(100vh - 24px));
     min-height: 560px;
+  }
+
+  .chat-panel__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .message-bubble {
+    max-width: min(520px, 88%);
+  }
+}
+
+@media (max-width: 520px) {
+  .button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-send-button {
+    width: 100%;
+  }
+
+  .message-list {
+    padding: 14px;
+  }
+
+  .message-avatar {
+    display: none;
+  }
+
+  .message-bubble {
+    max-width: 92%;
   }
 }

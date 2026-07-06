@@ -12,6 +12,7 @@ import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
 import {
   createMessagingWebSocket,
+  type MessageCreatedEvent,
   type ServerEvent,
   type MessagingWebSocket,
 } from "./realtime/webSocketClient";
@@ -58,6 +59,8 @@ export function App() {
     userId: string;
   } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [composerNotice, setComposerNotice] = useState<string | null>(null);
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -105,6 +108,7 @@ export function App() {
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
+    setComposerNotice(null);
     webSocketRef.current?.disconnect();
     const client = createMessagingWebSocket(config, jwtToken, {
       onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
@@ -128,6 +132,7 @@ export function App() {
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
+    setComposerNotice(null);
     setWebSocketStatus({ state: "idle", label: "Disconnected" });
   }
 
@@ -163,6 +168,17 @@ export function App() {
       Array.isArray(event.messages)
     ) {
       setMessages(event.messages.map(messageFromServer));
+      setComposerNotice(null);
+      return;
+    }
+    if (
+      event.type === "message.created" &&
+      isMessageCreatedEvent(event)
+    ) {
+      setMessages((currentMessages) =>
+        appendMessageIfNew(currentMessages, messageFromServer(event)),
+      );
+      setComposerNotice(null);
     }
   }
 
@@ -199,6 +215,29 @@ export function App() {
       type: "conversation.history",
       conversation_id: joinedConversation.conversationId,
     });
+  }
+
+  function handleMessageSend() {
+    const body = messageDraft.trim();
+
+    if (!joinedConversation || !body) {
+      return;
+    }
+
+    try {
+      webSocketRef.current?.send({
+        type: "message.send",
+        conversation_id: joinedConversation.conversationId,
+        client_message_id: createClientMessageId(),
+        body,
+      });
+      setMessageDraft("");
+      setComposerNotice("Message sent. Waiting for server event.");
+    } catch (error) {
+      setComposerNotice(
+        error instanceof Error ? error.message : "Message send failed",
+      );
+    }
   }
 
   async function runBackendCheck(
@@ -252,8 +291,50 @@ export function App() {
           conversationId={conversationId}
           joinedConversation={joinedConversation}
           messages={messages}
+          messageDraft={messageDraft}
+          isComposerDisabled={
+            webSocketStatus.state !== "connected" || !joinedConversation
+          }
+          composerNotice={composerNotice}
+          onMessageDraftChange={setMessageDraft}
+          onMessageSend={handleMessageSend}
         />
       </div>
     </AppShell>
+  );
+}
+
+function createClientMessageId() {
+  if ("crypto" in window && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function appendMessageIfNew(
+  messages: ChatMessage[],
+  nextMessage: ChatMessage,
+) {
+  if (messages.some((message) => message.id === nextMessage.id)) {
+    return messages;
+  }
+
+  return [...messages, nextMessage];
+}
+
+function isMessageCreatedEvent(event: ServerEvent): event is MessageCreatedEvent {
+  return (
+    event.type === "message.created" &&
+    "message_id" in event &&
+    typeof event.message_id === "string" &&
+    "conversation_id" in event &&
+    typeof event.conversation_id === "string" &&
+    "sender_id" in event &&
+    typeof event.sender_id === "string" &&
+    "body" in event &&
+    typeof event.body === "string" &&
+    "created_at" in event &&
+    typeof event.created_at === "string"
   );
 }
