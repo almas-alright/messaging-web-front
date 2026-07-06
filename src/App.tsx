@@ -60,6 +60,7 @@ export function App() {
   } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageDraft, setMessageDraft] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
 
   function handleConfigChange(nextConfig: AppConfig) {
@@ -292,11 +293,13 @@ export function App() {
           joinedConversation={joinedConversation}
           messages={messages}
           messageDraft={messageDraft}
+          selectedFile={selectedFile}
           isComposerDisabled={
             webSocketStatus.state !== "connected" || !joinedConversation
           }
           composerNotice={composerNotice}
           onMessageDraftChange={setMessageDraft}
+          onSelectedFileChange={setSelectedFile}
           onMessageSend={handleMessageSend}
         />
       </div>

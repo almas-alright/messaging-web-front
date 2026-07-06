@@ -353,7 +353,9 @@ textarea {
 }
 
 .emoji-toggle-button,
-.emoji-option {
+.emoji-option,
+.file-picker-button,
+.selected-file button {
   align-items: center;
   background: #ffffff;
   border: 1px solid #ccd6cf;
@@ -361,6 +363,23 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   justify-content: center;
+}
+
+.file-picker-button {
+  color: #23765a;
+  font-size: 0.82rem;
+  font-weight: 800;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.file-picker-button input {
+  display: none;
+}
+
+.file-picker-button--disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .emoji-toggle-button {
@@ -391,9 +410,39 @@ textarea {
 }
 
 .emoji-option:hover,
-.emoji-toggle-button:hover:not(:disabled) {
+.emoji-toggle-button:hover:not(:disabled),
+.file-picker-button:hover:not(.file-picker-button--disabled),
+.selected-file button:hover {
   border-color: #23765a;
   box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.08);
+}
+
+.selected-file {
+  align-items: center;
+  background: #f6f8f6;
+  border: 1px solid #e3e8e4;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 6px 8px 6px 12px;
+}
+
+.selected-file span {
+  color: #52605a;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-file button {
+  color: #52605a;
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-height: 28px;
+  padding: 0 10px;
 }
 
 .composer-input-stack textarea {

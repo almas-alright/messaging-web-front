@@ -16,9 +16,11 @@ type ChatPanelProps = {
   } | null;
   messages: ChatMessage[];
   messageDraft: string;
+  selectedFile: File | null;
   isComposerDisabled: boolean;
   composerNotice: string | null;
   onMessageDraftChange: (message: string) => void;
+  onSelectedFileChange: (file: File | null) => void;
   onMessageSend: () => void;
 };
 
@@ -29,9 +31,11 @@ export function ChatPanel({
   joinedConversation,
   messages,
   messageDraft,
+  selectedFile,
   isComposerDisabled,
   composerNotice,
   onMessageDraftChange,
+  onSelectedFileChange,
   onMessageSend,
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
@@ -177,7 +181,33 @@ export function ChatPanel({
                 ))}
               </div>
             ) : null}
+            <label
+              className={`file-picker-button ${
+                isComposerDisabled ? "file-picker-button--disabled" : ""
+              }`}
+            >
+              <span>Attach file</span>
+              <input
+                disabled={isComposerDisabled}
+                onChange={(event) =>
+                  onSelectedFileChange(event.target.files?.[0] ?? null)
+                }
+                type="file"
+              />
+            </label>
           </div>
+          {selectedFile ? (
+            <div className="selected-file">
+              <span>{selectedFile.name}</span>
+              <button
+                aria-label="Clear selected file"
+                onClick={() => onSelectedFileChange(null)}
+                type="button"
+              >
+                Clear
+              </button>
+            </div>
+          ) : null}
           <textarea
             aria-label="Message text"
             disabled={isComposerDisabled}
