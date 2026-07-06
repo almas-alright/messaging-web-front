@@ -7,12 +7,17 @@ type ChatPanelProps = {
   };
   readyUserId: string | null;
   conversationId: string;
+  joinedConversation: {
+    conversationId: string;
+    userId: string;
+  } | null;
 };
 
 export function ChatPanel({
   connectionState,
   readyUserId,
   conversationId,
+  joinedConversation,
 }: ChatPanelProps) {
   return (
     <section className="chat-panel" aria-label="Chat area">
@@ -36,6 +41,14 @@ export function ChatPanel({
         {readyUserId ? (
           <article className="message-bubble message-bubble--system">
             <p>WebSocket accepted JWT for {readyUserId}.</p>
+          </article>
+        ) : null}
+        {joinedConversation ? (
+          <article className="message-bubble message-bubble--system">
+            <p>
+              Joined {joinedConversation.conversationId} as{" "}
+              {joinedConversation.userId}.
+            </p>
           </article>
         ) : null}
       </div>

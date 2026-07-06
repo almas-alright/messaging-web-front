@@ -16,6 +16,10 @@ type SettingsPanelProps = {
     label: string;
   };
   readyUserId: string | null;
+  joinedConversation: {
+    conversationId: string;
+    userId: string;
+  } | null;
   conversationId: string;
   jwtToken: string;
   currentUser: CurrentUserResponse | null;
@@ -38,6 +42,7 @@ export function SettingsPanel({
   authStatus,
   webSocketStatus,
   readyUserId,
+  joinedConversation,
   conversationId,
   jwtToken,
   currentUser,
@@ -198,8 +203,13 @@ export function SettingsPanel({
             </div>
           </dl>
         ) : null}
+        {joinedConversation ? (
+          <div className="backend-status backend-status--connected">
+            <span>Joined</span>
+            <strong>{joinedConversation.conversationId}</strong>
+          </div>
+        ) : null}
         <ul className="plain-list">
-          <li>Join conversation</li>
           <li>Load message history</li>
         </ul>
       </section>

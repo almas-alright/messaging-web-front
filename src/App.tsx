@@ -53,6 +53,10 @@ export function App() {
   });
   const [readyUserId, setReadyUserId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState("conv-001");
+  const [joinedConversation, setJoinedConversation] = useState<{
+    conversationId: string;
+    userId: string;
+  } | null>(null);
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -98,6 +102,7 @@ export function App() {
   function handleWebSocketConnect() {
     setWebSocketStatus({ state: "connecting", label: "Connecting" });
     setReadyUserId(null);
+    setJoinedConversation(null);
     webSocketRef.current?.disconnect();
     const client = createMessagingWebSocket(config, jwtToken, {
       onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
@@ -119,6 +124,7 @@ export function App() {
     webSocketRef.current?.disconnect();
     webSocketRef.current = null;
     setReadyUserId(null);
+    setJoinedConversation(null);
     setWebSocketStatus({ state: "idle", label: "Disconnected" });
   }
 
@@ -132,6 +138,19 @@ export function App() {
       setWebSocketStatus({
         state: "connected",
         label: `Ready as ${event.user_id}`,
+      });
+      return;
+    }
+    if (
+      event.type === "conversation.joined" &&
+      "conversation_id" in event &&
+      typeof event.conversation_id === "string" &&
+      "user_id" in event &&
+      typeof event.user_id === "string"
+    ) {
+      setJoinedConversation({
+        conversationId: event.conversation_id,
+        userId: event.user_id,
       });
     }
   }
@@ -171,6 +190,7 @@ export function App() {
           authStatus={authStatus}
           webSocketStatus={webSocketStatus}
           readyUserId={readyUserId}
+          joinedConversation={joinedConversation}
           conversationId={conversationId}
           jwtToken={jwtToken}
           currentUser={currentUser}
@@ -190,6 +210,7 @@ export function App() {
           connectionState={webSocketStatus}
           readyUserId={readyUserId}
           conversationId={conversationId}
+          joinedConversation={joinedConversation}
         />
       </div>
     </AppShell>
