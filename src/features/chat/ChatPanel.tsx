@@ -12,6 +12,9 @@ type ChatPanelProps = {
     userId: string;
   } | null;
   messages: ChatMessage[];
+  messageDraft: string;
+  isComposerDisabled: boolean;
+  onMessageDraftChange: (message: string) => void;
 };
 
 export function ChatPanel({
@@ -20,6 +23,9 @@ export function ChatPanel({
   conversationId,
   joinedConversation,
   messages,
+  messageDraft,
+  isComposerDisabled,
+  onMessageDraftChange,
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
 
@@ -96,9 +102,31 @@ export function ChatPanel({
         })}
       </div>
 
-      <div className="composer-shell" aria-label="Message composer preview">
-        <span>Message composer placeholder</span>
-      </div>
+      <form
+        className="composer-shell"
+        aria-label="Message composer"
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <textarea
+          aria-label="Message text"
+          disabled={isComposerDisabled}
+          onChange={(event) => onMessageDraftChange(event.target.value)}
+          placeholder={
+            isComposerDisabled
+              ? "Connect and join a conversation to write"
+              : "Write a message"
+          }
+          rows={1}
+          value={messageDraft}
+        />
+        <button
+          className="composer-send-button"
+          disabled={isComposerDisabled || !messageDraft.trim()}
+          type="submit"
+        >
+          Send
+        </button>
+      </form>
     </section>
   );
 }

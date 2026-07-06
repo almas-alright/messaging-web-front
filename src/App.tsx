@@ -58,6 +58,7 @@ export function App() {
     userId: string;
   } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageDraft, setMessageDraft] = useState("");
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -252,6 +253,11 @@ export function App() {
           conversationId={conversationId}
           joinedConversation={joinedConversation}
           messages={messages}
+          messageDraft={messageDraft}
+          isComposerDisabled={
+            webSocketStatus.state !== "connected" || !joinedConversation
+          }
+          onMessageDraftChange={setMessageDraft}
         />
       </div>
     </AppShell>

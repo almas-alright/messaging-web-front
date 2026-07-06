@@ -329,10 +329,44 @@ textarea {
 }
 
 .composer-shell {
+  align-items: end;
   border-top: 1px solid #e3e8e4;
-  color: #6d7872;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
   min-height: 72px;
-  padding: 18px 20px;
+  padding: 14px 16px;
+}
+
+.composer-shell textarea {
+  border: 1px solid #ccd6cf;
+  border-radius: 8px;
+  max-height: 140px;
+  min-height: 44px;
+  outline: none;
+  padding: 11px 12px;
+  resize: vertical;
+}
+
+.composer-shell textarea:focus {
+  border-color: #23765a;
+  box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.12);
+}
+
+.composer-send-button {
+  background: #23765a;
+  border: 1px solid #23765a;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.composer-send-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .eyebrow {
