@@ -7,7 +7,7 @@
 - [x] 01.03 Add Codex entry point
 - [x] 01.04 Add workflow phase plan
 - [x] 01.05 Add task checklist
-- [ ] 01.06 Add context and contract docs
+- [x] 01.06 Add context and contract docs
 
 ## Phase 02: Vite React Skeleton
 
