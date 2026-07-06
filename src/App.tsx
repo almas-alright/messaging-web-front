@@ -1,15 +1,16 @@
+import { useState } from "react";
 import { AppShell } from "./components/AppShell";
 import { SettingsPanel } from "./components/SettingsPanel";
-import { loadAppConfig } from "./config/env";
+import { type AppConfig, loadAppConfig } from "./config/env";
 import { ChatPanel } from "./features/chat/ChatPanel";
 
 export function App() {
-  const config = loadAppConfig();
+  const [config, setConfig] = useState<AppConfig>(() => loadAppConfig());
 
   return (
     <AppShell>
       <div className="demo-layout">
-        <SettingsPanel config={config} />
+        <SettingsPanel config={config} onConfigChange={setConfig} />
         <ChatPanel />
       </div>
     </AppShell>

@@ -81,6 +81,33 @@ textarea {
   gap: 12px;
 }
 
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  color: #5b6862;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.field input {
+  border: 1px solid #ccd6cf;
+  border-radius: 8px;
+  color: #16201c;
+  min-height: 42px;
+  outline: none;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.field input:focus {
+  border-color: #23765a;
+  box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.12);
+}
+
 .chat-panel {
   display: grid;
   grid-template-rows: auto minmax(320px, 1fr) auto;
