@@ -110,8 +110,23 @@ export function App() {
     client.connect();
   }
 
+  function handleWebSocketReconnect() {
+    handleWebSocketConnect();
+  }
+
+  function handleWebSocketDisconnect() {
+    webSocketRef.current?.disconnect();
+    webSocketRef.current = null;
+    setReadyUserId(null);
+    setWebSocketStatus({ state: "idle", label: "Disconnected" });
+  }
+
   function handleWebSocketMessage(event: ServerEvent) {
-    if (event.type === "connection.ready" && "user_id" in event && typeof event.user_id === "string") {
+    if (
+      event.type === "connection.ready" &&
+      "user_id" in event &&
+      typeof event.user_id === "string"
+    ) {
       setReadyUserId(event.user_id);
       setWebSocketStatus({
         state: "connected",
@@ -155,6 +170,8 @@ export function App() {
           onJwtClear={handleJwtClear}
           onCheckCurrentUser={handleCurrentUserCheck}
           onWebSocketConnect={handleWebSocketConnect}
+          onWebSocketReconnect={handleWebSocketReconnect}
+          onWebSocketDisconnect={handleWebSocketDisconnect}
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />

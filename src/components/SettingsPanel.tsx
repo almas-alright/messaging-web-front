@@ -23,6 +23,8 @@ type SettingsPanelProps = {
   onJwtClear: () => void;
   onCheckCurrentUser: () => void;
   onWebSocketConnect: () => void;
+  onWebSocketReconnect: () => void;
+  onWebSocketDisconnect: () => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
 };
@@ -40,6 +42,8 @@ export function SettingsPanel({
   onJwtClear,
   onCheckCurrentUser,
   onWebSocketConnect,
+  onWebSocketReconnect,
+  onWebSocketDisconnect,
   onCheckHealth,
   onCheckReady,
 }: SettingsPanelProps) {
@@ -143,6 +147,18 @@ export function SettingsPanel({
         >
           Connect WebSocket
         </button>
+        <div className="button-row">
+          <button
+            type="button"
+            onClick={onWebSocketReconnect}
+            disabled={!jwtToken.trim()}
+          >
+            Reconnect
+          </button>
+          <button type="button" onClick={onWebSocketDisconnect}>
+            Disconnect
+          </button>
+        </div>
         <div
           className={`backend-status backend-status--${webSocketStatus.state}`}
         >
@@ -158,7 +174,8 @@ export function SettingsPanel({
           </dl>
         ) : null}
         <ul className="plain-list">
-          <li>File upload uses JWT later as bearer auth</li>
+          <li>Join conversation</li>
+          <li>Load message history</li>
         </ul>
       </section>
     </aside>
