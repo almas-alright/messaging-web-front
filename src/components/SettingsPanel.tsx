@@ -17,6 +17,7 @@ type SettingsPanelProps = {
   onJwtTokenChange: (token: string) => void;
   onJwtClear: () => void;
   onCheckCurrentUser: () => void;
+  onWebSocketConnect: () => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
 };
@@ -31,6 +32,7 @@ export function SettingsPanel({
   onJwtTokenChange,
   onJwtClear,
   onCheckCurrentUser,
+  onWebSocketConnect,
   onCheckHealth,
   onCheckReady,
 }: SettingsPanelProps) {
@@ -126,8 +128,17 @@ export function SettingsPanel({
 
       <section className="panel-section">
         <h2>Coming next</h2>
+        <button
+          className="full-width-button"
+          type="button"
+          onClick={onWebSocketConnect}
+          disabled={!jwtToken.trim()}
+        >
+          Connect WebSocket
+        </button>
         <ul className="plain-list">
-          <li>WebSocket uses JWT later as token query</li>
+          <li>Connection state display</li>
+          <li>Ready event handling</li>
           <li>File upload uses JWT later as bearer auth</li>
         </ul>
       </section>

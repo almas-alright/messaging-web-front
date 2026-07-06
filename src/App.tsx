@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createHttpClient, type CurrentUserResponse } from "./api/httpClient";
 import {
   clearStoredJwt,
@@ -10,6 +10,10 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
 import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
+import {
+  createMessagingWebSocket,
+  type MessagingWebSocket,
+} from "./realtime/webSocketClient";
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -22,6 +26,7 @@ type AuthStatus = {
 };
 
 export function App() {
+  const webSocketRef = useRef<MessagingWebSocket | null>(null);
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
   const [jwtToken, setJwtToken] = useState(() => loadStoredJwt());
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
@@ -77,6 +82,13 @@ export function App() {
     }
   }
 
+  function handleWebSocketConnect() {
+    webSocketRef.current?.disconnect();
+    const client = createMessagingWebSocket(config, jwtToken);
+    webSocketRef.current = client;
+    client.connect();
+  }
+
   async function runBackendCheck(
     label: string,
     check: () => Promise<{ status: string; service: string }>,
@@ -109,6 +121,7 @@ export function App() {
           onJwtTokenChange={handleJwtTokenChange}
           onJwtClear={handleJwtClear}
           onCheckCurrentUser={handleCurrentUserCheck}
+          onWebSocketConnect={handleWebSocketConnect}
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />
