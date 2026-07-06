@@ -239,19 +239,36 @@ textarea {
 }
 
 .message-row {
-  display: grid;
+  align-items: end;
+  display: flex;
+  gap: 8px;
 }
 
 .message-row--own {
-  justify-items: end;
+  justify-content: flex-end;
 }
 
 .message-row--other {
-  justify-items: start;
+  justify-content: flex-start;
+}
+
+.message-avatar {
+  align-items: center;
+  background: #2f5f73;
+  border-radius: 50%;
+  color: #ffffff;
+  display: inline-flex;
+  flex: 0 0 30px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
 }
 
 .message-bubble {
-  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(22, 32, 28, 0.06);
+  line-height: 1.45;
   max-width: min(560px, 82%);
   padding: 12px 14px;
 }
@@ -268,15 +285,19 @@ textarea {
   gap: 10px;
   justify-content: space-between;
   margin-top: 6px;
+  min-width: 132px;
 }
 
 .message-bubble--other {
   background: #ffffff;
   border: 1px solid #e3e8e4;
+  border-radius: 8px 8px 8px 3px;
 }
 
 .message-bubble--own {
-  background: #dff3e9;
+  background: #dcf4ea;
+  border: 1px solid #c5e6d7;
+  border-radius: 8px 8px 3px 8px;
 }
 
 .timeline-status,

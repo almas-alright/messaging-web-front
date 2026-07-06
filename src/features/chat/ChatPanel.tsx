@@ -64,6 +64,7 @@ export function ChatPanel({
         ) : null}
         {messages.map((message) => {
           const isOwnMessage = message.senderId === readyUserId;
+          const senderLabel = isOwnMessage ? "You" : message.senderId;
 
           return (
             <article
@@ -72,6 +73,11 @@ export function ChatPanel({
               }`}
               key={message.id}
             >
+              {!isOwnMessage ? (
+                <span className="message-avatar" aria-hidden="true">
+                  {getSenderInitial(message.senderId)}
+                </span>
+              ) : null}
               <div
                 className={`message-bubble ${
                   isOwnMessage ? "message-bubble--own" : "message-bubble--other"
@@ -79,7 +85,7 @@ export function ChatPanel({
               >
                 <p>{message.body}</p>
                 <footer>
-                  <span>{isOwnMessage ? "You" : message.senderId}</span>
+                  <span>{senderLabel}</span>
                   <time dateTime={message.createdAt}>
                     {formatMessageTime(message.createdAt)}
                   </time>
@@ -108,4 +114,8 @@ function formatMessageTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function getSenderInitial(senderId: string) {
+  return senderId.trim().slice(0, 1).toUpperCase() || "?";
 }
