@@ -55,7 +55,7 @@
 - [x] 07.02 Add own/other message bubbles
 - [x] 07.03 Add message composer
 - [x] 07.04 Send `message.send`
-- [ ] 07.05 Render realtime `message.created`
+- [x] 07.05 Render realtime `message.created`
 - [ ] 07.06 Add responsive mobile-friendly layout
 
 ## Phase 08: Emoji Support

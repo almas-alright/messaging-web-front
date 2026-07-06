@@ -12,6 +12,7 @@ import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
 import {
   createMessagingWebSocket,
+  type MessageCreatedEvent,
   type ServerEvent,
   type MessagingWebSocket,
 } from "./realtime/webSocketClient";
@@ -167,6 +168,17 @@ export function App() {
       Array.isArray(event.messages)
     ) {
       setMessages(event.messages.map(messageFromServer));
+      setComposerNotice(null);
+      return;
+    }
+    if (
+      event.type === "message.created" &&
+      isMessageCreatedEvent(event)
+    ) {
+      setMessages((currentMessages) =>
+        appendMessageIfNew(currentMessages, messageFromServer(event)),
+      );
+      setComposerNotice(null);
     }
   }
 
@@ -298,4 +310,31 @@ function createClientMessageId() {
   }
 
   return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function appendMessageIfNew(
+  messages: ChatMessage[],
+  nextMessage: ChatMessage,
+) {
+  if (messages.some((message) => message.id === nextMessage.id)) {
+    return messages;
+  }
+
+  return [...messages, nextMessage];
+}
+
+function isMessageCreatedEvent(event: ServerEvent): event is MessageCreatedEvent {
+  return (
+    event.type === "message.created" &&
+    "message_id" in event &&
+    typeof event.message_id === "string" &&
+    "conversation_id" in event &&
+    typeof event.conversation_id === "string" &&
+    "sender_id" in event &&
+    typeof event.sender_id === "string" &&
+    "body" in event &&
+    typeof event.body === "string" &&
+    "created_at" in event &&
+    typeof event.created_at === "string"
+  );
 }
