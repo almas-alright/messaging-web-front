@@ -13,6 +13,7 @@ type BackendStatus = {
 
 export function App() {
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
+  const [jwtToken, setJwtToken] = useState("");
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
     state: "idle",
     label: "Not checked",
@@ -56,7 +57,9 @@ export function App() {
         <SettingsPanel
           config={config}
           backendStatus={backendStatus}
+          jwtToken={jwtToken}
           onConfigChange={handleConfigChange}
+          onJwtTokenChange={setJwtToken}
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />

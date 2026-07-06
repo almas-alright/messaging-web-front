@@ -6,7 +6,9 @@ type SettingsPanelProps = {
     state: "idle" | "checking" | "ok" | "error";
     label: string;
   };
+  jwtToken: string;
   onConfigChange: (config: AppConfig) => void;
+  onJwtTokenChange: (token: string) => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
 };
@@ -14,7 +16,9 @@ type SettingsPanelProps = {
 export function SettingsPanel({
   config,
   backendStatus,
+  jwtToken,
   onConfigChange,
+  onJwtTokenChange,
   onCheckHealth,
   onCheckReady,
 }: SettingsPanelProps) {
@@ -59,11 +63,25 @@ export function SettingsPanel({
       </section>
 
       <section className="panel-section">
+        <h2>Demo JWT</h2>
+        <label className="field">
+          <span>Paste token</span>
+          <textarea
+            value={jwtToken}
+            onChange={(event) => onJwtTokenChange(event.target.value)}
+            placeholder="Paste manually generated JWT"
+            rows={5}
+            spellCheck={false}
+          />
+        </label>
+      </section>
+
+      <section className="panel-section">
         <h2>Coming next</h2>
         <ul className="plain-list">
-          <li>Manual JWT paste</li>
+          <li>Save demo JWT locally</li>
           <li>Authenticated current user</li>
-          <li>Saved local demo settings</li>
+          <li>Clear demo auth</li>
         </ul>
       </section>
     </aside>

@@ -93,7 +93,8 @@ textarea {
   text-transform: uppercase;
 }
 
-.field input {
+.field input,
+.field textarea {
   border: 1px solid #ccd6cf;
   border-radius: 8px;
   color: #16201c;
@@ -103,7 +104,13 @@ textarea {
   width: 100%;
 }
 
-.field input:focus {
+.field textarea {
+  min-height: 116px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
   border-color: #23765a;
   box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.12);
 }
