@@ -72,6 +72,9 @@ export function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedAttachment, setUploadedAttachment] =
     useState<AttachmentResponse | null>(null);
+  const [attachmentMetadataById, setAttachmentMetadataById] = useState<
+    Record<string, AttachmentResponse>
+  >({});
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
     state: "idle",
     label: "No file uploaded",
@@ -287,6 +290,10 @@ export function App() {
         selectedFile,
       );
       setUploadedAttachment(attachment);
+      setAttachmentMetadataById((currentMetadata) => ({
+        ...currentMetadata,
+        [attachment.id]: attachment,
+      }));
       setUploadStatus({
         state: "uploaded",
         label: `Uploaded ${attachment.original_name}`,
@@ -351,6 +358,8 @@ export function App() {
           conversationId={conversationId}
           joinedConversation={joinedConversation}
           messages={messages}
+          attachmentMetadataById={attachmentMetadataById}
+          attachmentBaseUrl={config.apiBaseUrl}
           messageDraft={messageDraft}
           selectedFile={selectedFile}
           uploadedAttachment={uploadedAttachment}

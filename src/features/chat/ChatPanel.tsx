@@ -16,6 +16,8 @@ type ChatPanelProps = {
     userId: string;
   } | null;
   messages: ChatMessage[];
+  attachmentMetadataById: Record<string, AttachmentResponse>;
+  attachmentBaseUrl: string;
   messageDraft: string;
   selectedFile: File | null;
   uploadedAttachment: AttachmentResponse | null;
@@ -38,6 +40,8 @@ export function ChatPanel({
   conversationId,
   joinedConversation,
   messages,
+  attachmentMetadataById,
+  attachmentBaseUrl,
   messageDraft,
   selectedFile,
   uploadedAttachment,
@@ -147,7 +151,28 @@ export function ChatPanel({
                   isOwnMessage ? "message-bubble--own" : "message-bubble--other"
                 }`}
               >
-                <p>{message.body}</p>
+                {message.body ? <p>{message.body}</p> : null}
+                {message.attachmentId ? (
+                  <a
+                    className="attachment-card"
+                    href={buildAttachmentUrl(
+                      attachmentBaseUrl,
+                      message.attachmentId,
+                    )}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <span>
+                      {attachmentMetadataById[message.attachmentId]
+                        ?.original_name ?? `Attachment ${message.attachmentId}`}
+                    </span>
+                    <small>
+                      {formatAttachmentMeta(
+                        attachmentMetadataById[message.attachmentId],
+                      )}
+                    </small>
+                  </a>
+                ) : null}
                 <footer>
                   <span>{senderLabel}</span>
                   <time dateTime={message.createdAt}>
@@ -289,4 +314,30 @@ function formatMessageTime(value: string) {
 
 function getSenderInitial(senderId: string) {
   return senderId.trim().slice(0, 1).toUpperCase() || "?";
+}
+
+function buildAttachmentUrl(apiBaseUrl: string, attachmentId: string) {
+  return `${apiBaseUrl}/attachments/${encodeURIComponent(attachmentId)}`;
+}
+
+function formatAttachmentMeta(attachment?: AttachmentResponse) {
+  if (!attachment) {
+    return "Attachment metadata endpoint";
+  }
+
+  return `${formatFileSize(attachment.size_bytes)} · ${
+    attachment.mime_type || "file"
+  }`;
+}
+
+function formatFileSize(sizeBytes: number) {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
