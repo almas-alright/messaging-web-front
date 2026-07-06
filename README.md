@@ -184,6 +184,8 @@ For a repeatable walkthrough, use
 For frontend/backend ownership details, see
 [docs/config-boundary.md](docs/config-boundary.md).
 
+Release notes are in [docs/release-notes.md](docs/release-notes.md).
+
 ## Frontend Checks
 
 Run:

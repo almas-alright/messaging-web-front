@@ -58,3 +58,7 @@ Boundary summary:
   storage, policy status, and moderation behavior.
 - Login/register/password, production identity integration, production DB setup,
   and AI remain out of scope for this frontend demo.
+
+## 11.05 Release Notes
+
+Prepared `docs/release-notes.md` and linked it from `README.md`.
