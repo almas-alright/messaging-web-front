@@ -51,6 +51,13 @@ Those are future phases.
 
 Both backend and frontend can run on the same Ubuntu PC.
 
+Prerequisites:
+
+- Node.js 20 or newer
+- npm
+- Docker with Docker Compose
+- Running messaging backend on port `8080`
+
 Backend example:
 
 ```bash
@@ -64,6 +71,7 @@ Frontend local run:
 ```bash
 git clone https://github.com/almas-alright/messaging-web-front.git
 cd messaging-web-front
+cp .env.example .env.local
 npm install
 npm run dev -- --host 0.0.0.0
 ```
@@ -121,6 +129,12 @@ http://<host-ip>:8080/ready
 3. Configure the frontend for LAN access.
 
 Create `.env.local` in this repository:
+
+```bash
+cp .env.example .env.local
+```
+
+Then edit `.env.local`:
 
 ```env
 VITE_API_BASE_URL=http://<host-ip>:8080

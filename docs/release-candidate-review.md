@@ -29,3 +29,14 @@ local demo buyer identity and default local demo JWT secret.
 
 Manual browser click-through is still recommended before a stakeholder demo, but
 the protocol flow used by the frontend was verified end to end from the terminal.
+
+## 11.03 README Installation Review
+
+Reviewed `README.md` for fresh-clone local setup, LAN demo setup, Docker static
+frontend usage, backend CORS notes, and check commands.
+
+Changes made:
+
+- Added prerequisites for Node.js, npm, Docker Compose, and backend port `8080`.
+- Added explicit `cp .env.example .env.local` setup in local and LAN flows.
+- Kept Docker static frontend instructions and local test checklist links.
