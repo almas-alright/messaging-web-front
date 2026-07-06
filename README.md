@@ -164,6 +164,9 @@ the attachment ID appears.
 Make sure firewall rules allow inbound traffic to ports `5173` and `8080` on
 the Ubuntu PC during local testing.
 
+For a repeatable walkthrough, use
+[docs/local-test-checklist.md](docs/local-test-checklist.md).
+
 ## Frontend Checks
 
 Run:

@@ -79,7 +79,7 @@
 - [x] 10.02 Add `.env.example`
 - [x] 10.03 Add Dockerfile for frontend static hosting if practical
 - [x] 10.04 Add docker-compose frontend example if practical
-- [ ] 10.05 Add local test checklist
+- [x] 10.05 Add local test checklist
 
 ## Phase 11: Release Candidate Review
 
