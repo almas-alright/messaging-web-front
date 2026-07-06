@@ -1,0 +1,11 @@
+services:
+  messaging-web-front:
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+        VITE_WS_BASE_URL: ${VITE_WS_BASE_URL:-ws://localhost:8080/ws}
+    image: messaging-web-front:local
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    restart: unless-stopped

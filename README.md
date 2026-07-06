@@ -175,6 +175,33 @@ npm run build
 
 `npm run lint` is not configured yet.
 
+## Docker Static Frontend
+
+Build and run the frontend as a static Nginx container:
+
+```bash
+docker compose up --build
+```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+For LAN demo builds, pass the backend URLs at build time:
+
+```bash
+VITE_API_BASE_URL=http://<host-ip>:8080 \
+VITE_WS_BASE_URL=ws://<host-ip>:8080/ws \
+FRONTEND_PORT=5173 \
+docker compose up --build
+```
+
+Vite embeds these values during the Docker image build. You can still override
+API and WebSocket URLs from the app settings panel in the browser during demo
+testing.
+
 ## Backend CORS Requirement
 
 The backend must allow local frontend origins during LAN testing, for example:
