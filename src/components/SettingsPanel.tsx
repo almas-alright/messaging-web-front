@@ -9,6 +9,7 @@ type SettingsPanelProps = {
   jwtToken: string;
   onConfigChange: (config: AppConfig) => void;
   onJwtTokenChange: (token: string) => void;
+  onCheckCurrentUser: () => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
 };
@@ -19,6 +20,7 @@ export function SettingsPanel({
   jwtToken,
   onConfigChange,
   onJwtTokenChange,
+  onCheckCurrentUser,
   onCheckHealth,
   onCheckReady,
 }: SettingsPanelProps) {
@@ -74,6 +76,14 @@ export function SettingsPanel({
             spellCheck={false}
           />
         </label>
+        <button
+          className="full-width-button"
+          type="button"
+          onClick={onCheckCurrentUser}
+          disabled={!jwtToken.trim()}
+        >
+          Check current user
+        </button>
       </section>
 
       <section className="panel-section">

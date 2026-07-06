@@ -38,6 +38,10 @@ export function App() {
     await runBackendCheck("Ready", () => createHttpClient(config).getReady());
   }
 
+  async function handleCurrentUserCheck() {
+    await createHttpClient(config).getCurrentUser(jwtToken);
+  }
+
   async function runBackendCheck(
     label: string,
     check: () => Promise<{ status: string; service: string }>,
@@ -66,6 +70,7 @@ export function App() {
           jwtToken={jwtToken}
           onConfigChange={handleConfigChange}
           onJwtTokenChange={handleJwtTokenChange}
+          onCheckCurrentUser={handleCurrentUserCheck}
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />
