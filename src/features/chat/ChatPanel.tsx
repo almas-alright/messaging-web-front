@@ -1,4 +1,13 @@
-export function ChatPanel() {
+import type { ConnectionState } from "../../types/chat";
+
+type ChatPanelProps = {
+  connectionState: {
+    state: ConnectionState;
+    label: string;
+  };
+};
+
+export function ChatPanel({ connectionState }: ChatPanelProps) {
   return (
     <section className="chat-panel" aria-label="Chat area">
       <div className="chat-panel__header">
@@ -6,7 +15,9 @@ export function ChatPanel() {
           <p className="eyebrow">Conversation</p>
           <h2>conv-001</h2>
         </div>
-        <span className="connection-dot">Not connected</span>
+        <span className={`connection-dot connection-dot--${connectionState.state}`}>
+          {connectionState.label}
+        </span>
       </div>
 
       <div className="message-list" aria-label="Messages">

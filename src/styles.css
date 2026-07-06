@@ -183,7 +183,13 @@ textarea {
   background: #fff9ed;
 }
 
-.backend-status--ok {
+.backend-status--connecting {
+  border-color: #dbc8a7;
+  background: #fff9ed;
+}
+
+.backend-status--ok,
+.backend-status--connected {
   border-color: #b8d3c6;
   background: #edf8f2;
 }

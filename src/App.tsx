@@ -14,6 +14,7 @@ import {
   createMessagingWebSocket,
   type MessagingWebSocket,
 } from "./realtime/webSocketClient";
+import type { ConnectionState } from "./types/chat";
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -22,6 +23,11 @@ type BackendStatus = {
 
 type AuthStatus = {
   state: "idle" | "checking" | "ok" | "error";
+  label: string;
+};
+
+type WebSocketStatus = {
+  state: ConnectionState;
   label: string;
 };
 
@@ -40,6 +46,10 @@ export function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(
     null,
   );
+  const [webSocketStatus, setWebSocketStatus] = useState<WebSocketStatus>({
+    state: "idle",
+    label: "Not connected",
+  });
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -83,8 +93,15 @@ export function App() {
   }
 
   function handleWebSocketConnect() {
+    setWebSocketStatus({ state: "connecting", label: "Connecting" });
     webSocketRef.current?.disconnect();
-    const client = createMessagingWebSocket(config, jwtToken);
+    const client = createMessagingWebSocket(config, jwtToken, {
+      onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
+      onClose: () =>
+        setWebSocketStatus({ state: "idle", label: "Disconnected" }),
+      onError: () =>
+        setWebSocketStatus({ state: "error", label: "Connection error" }),
+    });
     webSocketRef.current = client;
     client.connect();
   }
@@ -115,6 +132,7 @@ export function App() {
           config={config}
           backendStatus={backendStatus}
           authStatus={authStatus}
+          webSocketStatus={webSocketStatus}
           jwtToken={jwtToken}
           currentUser={currentUser}
           onConfigChange={handleConfigChange}
@@ -125,7 +143,7 @@ export function App() {
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />
-        <ChatPanel />
+        <ChatPanel connectionState={webSocketStatus} />
       </div>
     </AppShell>
   );
