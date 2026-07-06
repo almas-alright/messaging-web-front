@@ -52,6 +52,7 @@ export function App() {
     label: "Not connected",
   });
   const [readyUserId, setReadyUserId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState("conv-001");
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -163,11 +164,13 @@ export function App() {
           authStatus={authStatus}
           webSocketStatus={webSocketStatus}
           readyUserId={readyUserId}
+          conversationId={conversationId}
           jwtToken={jwtToken}
           currentUser={currentUser}
           onConfigChange={handleConfigChange}
           onJwtTokenChange={handleJwtTokenChange}
           onJwtClear={handleJwtClear}
+          onConversationIdChange={setConversationId}
           onCheckCurrentUser={handleCurrentUserCheck}
           onWebSocketConnect={handleWebSocketConnect}
           onWebSocketReconnect={handleWebSocketReconnect}
@@ -175,7 +178,11 @@ export function App() {
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}
         />
-        <ChatPanel connectionState={webSocketStatus} readyUserId={readyUserId} />
+        <ChatPanel
+          connectionState={webSocketStatus}
+          readyUserId={readyUserId}
+          conversationId={conversationId}
+        />
       </div>
     </AppShell>
   );

@@ -6,15 +6,20 @@ type ChatPanelProps = {
     label: string;
   };
   readyUserId: string | null;
+  conversationId: string;
 };
 
-export function ChatPanel({ connectionState, readyUserId }: ChatPanelProps) {
+export function ChatPanel({
+  connectionState,
+  readyUserId,
+  conversationId,
+}: ChatPanelProps) {
   return (
     <section className="chat-panel" aria-label="Chat area">
       <div className="chat-panel__header">
         <div>
           <p className="eyebrow">Conversation</p>
-          <h2>conv-001</h2>
+          <h2>{conversationId || "No conversation"}</h2>
         </div>
         <span className={`connection-dot connection-dot--${connectionState.state}`}>
           {connectionState.label}

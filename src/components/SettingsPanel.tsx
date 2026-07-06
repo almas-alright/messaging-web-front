@@ -16,11 +16,13 @@ type SettingsPanelProps = {
     label: string;
   };
   readyUserId: string | null;
+  conversationId: string;
   jwtToken: string;
   currentUser: CurrentUserResponse | null;
   onConfigChange: (config: AppConfig) => void;
   onJwtTokenChange: (token: string) => void;
   onJwtClear: () => void;
+  onConversationIdChange: (conversationId: string) => void;
   onCheckCurrentUser: () => void;
   onWebSocketConnect: () => void;
   onWebSocketReconnect: () => void;
@@ -35,11 +37,13 @@ export function SettingsPanel({
   authStatus,
   webSocketStatus,
   readyUserId,
+  conversationId,
   jwtToken,
   currentUser,
   onConfigChange,
   onJwtTokenChange,
   onJwtClear,
+  onConversationIdChange,
   onCheckCurrentUser,
   onWebSocketConnect,
   onWebSocketReconnect,
@@ -138,7 +142,16 @@ export function SettingsPanel({
       </section>
 
       <section className="panel-section">
-        <h2>Coming next</h2>
+        <h2>Conversation</h2>
+        <label className="field">
+          <span>Conversation ID</span>
+          <input
+            type="text"
+            value={conversationId}
+            onChange={(event) => onConversationIdChange(event.target.value)}
+            placeholder="conv-001"
+          />
+        </label>
         <button
           className="full-width-button"
           type="button"
