@@ -33,12 +33,32 @@ textarea {
   padding: 24px;
 }
 
-.welcome-panel {
+.chat-preview {
   width: min(100%, 680px);
   border: 1px solid #d9e0da;
   border-radius: 8px;
   background: #ffffff;
   padding: 32px;
+}
+
+.chat-preview__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.chat-preview__body {
+  margin-top: 24px;
+}
+
+.status-pill {
+  border: 1px solid #b8d3c6;
+  border-radius: 999px;
+  color: #23765a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 10px;
 }
 
 .eyebrow {
