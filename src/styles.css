@@ -137,6 +137,11 @@ textarea {
   width: 100%;
 }
 
+.full-width-button--secondary {
+  background: #ffffff;
+  color: #23765a;
+}
+
 .button-row button:nth-child(2) {
   background: #ffffff;
   color: #23765a;

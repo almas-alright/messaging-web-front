@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { createHttpClient, type CurrentUserResponse } from "./api/httpClient";
-import { loadStoredJwt, saveStoredJwt } from "./auth/demoAuthStorage";
+import {
+  clearStoredJwt,
+  loadStoredJwt,
+  saveStoredJwt,
+} from "./auth/demoAuthStorage";
 import { AppShell } from "./components/AppShell";
 import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
@@ -40,6 +44,13 @@ export function App() {
   function handleJwtTokenChange(nextToken: string) {
     setJwtToken(nextToken);
     saveStoredJwt(nextToken);
+  }
+
+  function handleJwtClear() {
+    setJwtToken("");
+    setCurrentUser(null);
+    setAuthStatus({ state: "idle", label: "JWT cleared" });
+    clearStoredJwt();
   }
 
   async function handleHealthCheck() {
@@ -96,6 +107,7 @@ export function App() {
           currentUser={currentUser}
           onConfigChange={handleConfigChange}
           onJwtTokenChange={handleJwtTokenChange}
+          onJwtClear={handleJwtClear}
           onCheckCurrentUser={handleCurrentUserCheck}
           onCheckHealth={handleHealthCheck}
           onCheckReady={handleReadyCheck}

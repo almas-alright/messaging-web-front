@@ -15,6 +15,7 @@ type SettingsPanelProps = {
   currentUser: CurrentUserResponse | null;
   onConfigChange: (config: AppConfig) => void;
   onJwtTokenChange: (token: string) => void;
+  onJwtClear: () => void;
   onCheckCurrentUser: () => void;
   onCheckHealth: () => void;
   onCheckReady: () => void;
@@ -28,6 +29,7 @@ export function SettingsPanel({
   currentUser,
   onConfigChange,
   onJwtTokenChange,
+  onJwtClear,
   onCheckCurrentUser,
   onCheckHealth,
   onCheckReady,
@@ -92,6 +94,14 @@ export function SettingsPanel({
         >
           Check current user
         </button>
+        <button
+          className="full-width-button full-width-button--secondary"
+          type="button"
+          onClick={onJwtClear}
+          disabled={!jwtToken.trim() && !currentUser}
+        >
+          Clear demo JWT
+        </button>
         <div className={`backend-status backend-status--${authStatus.state}`}>
           <span>Auth</span>
           <strong>{authStatus.label}</strong>
@@ -117,9 +127,8 @@ export function SettingsPanel({
       <section className="panel-section">
         <h2>Coming next</h2>
         <ul className="plain-list">
-          <li>Save demo JWT locally</li>
-          <li>Authenticated current user</li>
-          <li>Clear demo auth</li>
+          <li>WebSocket uses JWT later as token query</li>
+          <li>File upload uses JWT later as bearer auth</li>
         </ul>
       </section>
     </aside>

@@ -11,3 +11,7 @@ export function loadStoredJwt() {
 export function saveStoredJwt(token: string) {
   window.localStorage.setItem(jwtStorageKey, token);
 }
+
+export function clearStoredJwt() {
+  window.localStorage.removeItem(jwtStorageKey);
+}
