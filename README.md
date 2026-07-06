@@ -59,17 +59,23 @@ cd messaging-service
 docker compose up --build
 ```
 
-Frontend example after implementation:
+Frontend local run:
 
 ```bash
 git clone https://github.com/almas-alright/messaging-web-front.git
 cd messaging-web-front
-cp .env.example .env
 npm install
 npm run dev -- --host 0.0.0.0
 ```
 
-Example `.env` values:
+The app defaults to:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080
+VITE_WS_BASE_URL=ws://localhost:8080/ws
+```
+
+For LAN testing, create a local `.env.local` file:
 
 ```env
 VITE_API_BASE_URL=http://192.168.1.10:8080
@@ -83,6 +89,17 @@ Other computers on the same local network can open:
 ```text
 http://192.168.1.10:5173
 ```
+
+## Frontend Checks
+
+Run:
+
+```bash
+npm install
+npm run build
+```
+
+`npm run lint` is not configured yet.
 
 ## Backend CORS Requirement
 

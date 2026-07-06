@@ -11,11 +11,11 @@
 
 ## Phase 02: Vite React Skeleton
 
-- [ ] 02.01 Initialize Vite React TypeScript app
-- [ ] 02.02 Add basic folder structure
-- [ ] 02.03 Add environment config loading
-- [ ] 02.04 Add base layout shell
-- [ ] 02.05 Add README run instructions update
+- [x] 02.01 Initialize Vite React TypeScript app
+- [x] 02.02 Add basic folder structure
+- [x] 02.03 Add environment config loading
+- [x] 02.04 Add base layout shell
+- [x] 02.05 Add README run instructions update
 
 ## Phase 03: Backend Configuration And Health Check
 
