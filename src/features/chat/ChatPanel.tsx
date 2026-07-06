@@ -23,6 +23,7 @@ type ChatPanelProps = {
     state: "idle" | "uploading" | "uploaded" | "error";
     label: string;
   };
+  canSendMessage: boolean;
   isComposerDisabled: boolean;
   composerNotice: string | null;
   onMessageDraftChange: (message: string) => void;
@@ -41,6 +42,7 @@ export function ChatPanel({
   selectedFile,
   uploadedAttachment,
   uploadStatus,
+  canSendMessage,
   isComposerDisabled,
   composerNotice,
   onMessageDraftChange,
@@ -80,7 +82,7 @@ export function ChatPanel({
 
     event.preventDefault();
 
-    if (!isComposerDisabled && messageDraft.trim()) {
+    if (!isComposerDisabled && canSendMessage) {
       onMessageSend();
     }
   }
@@ -262,7 +264,7 @@ export function ChatPanel({
         </div>
         <button
           className="composer-send-button"
-          disabled={isComposerDisabled || !messageDraft.trim()}
+          disabled={isComposerDisabled || !canSendMessage}
           type="submit"
         >
           Send

@@ -244,8 +244,9 @@ export function App() {
 
   function handleMessageSend() {
     const body = messageDraft.trim();
+    const attachment = uploadedAttachment;
 
-    if (!joinedConversation || !body) {
+    if (!joinedConversation || (!body && !attachment)) {
       return;
     }
 
@@ -254,9 +255,15 @@ export function App() {
         type: "message.send",
         conversation_id: joinedConversation.conversationId,
         client_message_id: createClientMessageId(),
-        body,
+        body: body || undefined,
+        attachment_id: attachment?.id,
       });
       setMessageDraft("");
+      if (attachment) {
+        setSelectedFile(null);
+        setUploadedAttachment(null);
+        setUploadStatus({ state: "idle", label: "No file uploaded" });
+      }
       setComposerNotice("Message sent. Waiting for server event.");
     } catch (error) {
       setComposerNotice(
@@ -348,6 +355,7 @@ export function App() {
           selectedFile={selectedFile}
           uploadedAttachment={uploadedAttachment}
           uploadStatus={uploadStatus}
+          canSendMessage={Boolean(messageDraft.trim() || uploadedAttachment)}
           isComposerDisabled={
             webSocketStatus.state !== "connected" || !joinedConversation
           }
