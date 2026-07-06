@@ -61,7 +61,7 @@
 ## Phase 08: Emoji Support
 
 - [x] 08.01 Add simple emoji picker
-- [ ] 08.02 Insert emoji into composer
+- [x] 08.02 Insert emoji into composer
 - [ ] 08.03 Keep keyboard typing simple
 - [ ] 08.04 Verify emoji send/receive through WebSocket
 
