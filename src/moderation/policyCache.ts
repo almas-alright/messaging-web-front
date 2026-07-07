@@ -11,6 +11,22 @@ export type CachedModerationPolicies = {
   policies: ModerationPolicyResponse[];
 };
 
+export function normalizeModerationPolicyListResponse(
+  response: unknown,
+): ModerationPolicyListResponse {
+  const parsed =
+    response && typeof response === "object"
+      ? (response as Partial<ModerationPolicyListResponse>)
+      : {};
+
+  return {
+    version: typeof parsed.version === "string" ? parsed.version : "",
+    policies: Array.isArray(parsed.policies)
+      ? parsed.policies.filter(isPolicyLike)
+      : [],
+  };
+}
+
 export function loadCachedModerationPolicies(): CachedModerationPolicies | null {
   try {
     const raw = window.localStorage.getItem(moderationPolicyStorageKey);
@@ -40,10 +56,11 @@ export function loadCachedModerationPolicies(): CachedModerationPolicies | null 
 export function saveCachedModerationPolicies(
   response: ModerationPolicyListResponse,
 ): CachedModerationPolicies {
+  const normalizedResponse = normalizeModerationPolicyListResponse(response);
   const cache = {
-    version: response.version,
+    version: normalizedResponse.version,
     fetchedAt: new Date().toISOString(),
-    policies: response.policies,
+    policies: normalizedResponse.policies,
   };
   window.localStorage.setItem(
     moderationPolicyStorageKey,

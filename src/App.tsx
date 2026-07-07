@@ -26,6 +26,7 @@ import {
 } from "./moderation/detection";
 import {
   loadCachedModerationPolicies,
+  normalizeModerationPolicyListResponse,
   saveCachedModerationPolicies,
   type CachedModerationPolicies,
 } from "./moderation/policyCache";
@@ -140,6 +141,9 @@ export function App() {
     useState<CachedModerationPolicies | null>(() =>
       loadCachedModerationPolicies(),
     );
+  const [moderationPolicies, setModerationPolicies] = useState(
+    () => moderationPolicyCache?.policies ?? [],
+  );
   const [adminModerationFlags, setAdminModerationFlags] = useState<
     AdminModerationFlagResponse[]
   >([]);
@@ -151,17 +155,19 @@ export function App() {
     null,
   );
   const moderationDetection = useMemo(
-    () =>
-      detectModerationRisk(
-        messageDraft,
-        moderationPolicyCache?.policies ?? [],
-      ),
-    [messageDraft, moderationPolicyCache],
+    () => detectModerationRisk(messageDraft, moderationPolicies),
+    [messageDraft, moderationPolicies],
   );
 
   useEffect(() => {
     joinedConversationRef.current = joinedConversation;
   }, [joinedConversation]);
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.debug(`moderation policies loaded: ${moderationPolicies.length}`);
+    }
+  }, [moderationPolicies]);
 
   useEffect(() => {
     if (!currentUser || !jwtToken.trim()) {
@@ -359,13 +365,11 @@ export function App() {
   }
 
   function updateModerationPolicyCache(response: ModerationPolicyListResponse) {
-    setModerationPolicyCache((currentCache) => {
-      if (currentCache?.version === response.version) {
-        return currentCache;
-      }
+    const normalizedResponse = normalizeModerationPolicyListResponse(response);
+    const nextCache = saveCachedModerationPolicies(normalizedResponse);
 
-      return saveCachedModerationPolicies(response);
-    });
+    setModerationPolicyCache(nextCache);
+    setModerationPolicies(nextCache.policies);
   }
 
   function handleWebSocketConnect() {
@@ -862,7 +866,7 @@ export function App() {
               ? `Warning: this message may include restricted contact information (${moderationDetection.label}).`
               : null
           }
-          moderationPolicies={moderationPolicyCache?.policies ?? []}
+          moderationPolicies={moderationPolicies}
           isOtherUserTyping={isOtherUserTyping}
           onMessageDraftChange={handleMessageDraftChange}
           onSelectedFileChange={handleSelectedFileChange}

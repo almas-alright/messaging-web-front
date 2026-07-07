@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import type {
   AttachmentResponse,
   ModerationPolicyResponse,
@@ -86,6 +92,16 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
   const timelineItems = buildMessageTimeline(messages);
+  const messageModerationDetections = useMemo(
+    () =>
+      new Map(
+        messages.map((message) => [
+          message.id,
+          detectModerationRisk(message.body, moderationPolicies),
+        ]),
+      ),
+    [messages, moderationPolicies],
+  );
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const previousFirstMessageIdRef = useRef("");
@@ -230,9 +246,8 @@ export function ChatPanel({
           const message = item.message;
           const isOwnMessage = message.senderId === readyUserId;
           const senderLabel = isOwnMessage ? "You" : message.senderId;
-          const messageModerationDetection = message.body
-            ? detectModerationRisk(message.body, moderationPolicies)
-            : null;
+          const messageModerationDetection =
+            messageModerationDetections.get(message.id) ?? null;
 
           return (
             <article
