@@ -28,6 +28,7 @@ type ChatPanelProps = {
   canSendMessage: boolean;
   isComposerDisabled: boolean;
   composerNotice: string | null;
+  isOtherUserTyping: boolean;
   onMessageDraftChange: (message: string) => void;
   onSelectedFileChange: (file: File | null) => void;
   onFileUpload: () => void;
@@ -49,6 +50,7 @@ export function ChatPanel({
   canSendMessage,
   isComposerDisabled,
   composerNotice,
+  isOtherUserTyping,
   onMessageDraftChange,
   onSelectedFileChange,
   onFileUpload,
@@ -291,6 +293,15 @@ export function ChatPanel({
             rows={1}
             value={messageDraft}
           />
+          {isOtherUserTyping ? (
+            <span
+              aria-label="Other user is typing"
+              className="typing-indicator"
+              role="status"
+            >
+              ✍️
+            </span>
+          ) : null}
           {composerNotice ? (
             <span className="composer-notice">{composerNotice}</span>
           ) : null}

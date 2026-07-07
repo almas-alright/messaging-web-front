@@ -542,6 +542,14 @@ textarea {
   box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.12);
 }
 
+.typing-indicator {
+  animation: typing-pen-bounce 0.9s ease-in-out infinite;
+  display: inline-flex;
+  font-size: 1rem;
+  line-height: 1;
+  width: max-content;
+}
+
 .composer-notice {
   color: #66736d;
   font-size: 0.78rem;
@@ -701,5 +709,18 @@ li {
 
   100% {
     transform: translateX(240%);
+  }
+}
+
+@keyframes typing-pen-bounce {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translateY(0) rotate(-6deg);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-2px) rotate(6deg);
   }
 }

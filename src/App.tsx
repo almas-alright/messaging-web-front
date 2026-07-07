@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createHttpClient,
   type AttachmentResponse,
@@ -17,10 +17,13 @@ import { ChatPanel } from "./features/chat/ChatPanel";
 import {
   createMessagingWebSocket,
   type MessageCreatedEvent,
-  type ServerEvent,
   type MessagingWebSocket,
+  type ServerEvent,
 } from "./realtime/webSocketClient";
 import type { ChatMessage, ConnectionState } from "./types/chat";
+
+const TYPING_IDLE_TIMEOUT_MS = 1500;
+const TYPING_INDICATOR_TIMEOUT_MS = 3000;
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -44,6 +47,13 @@ type UploadStatus = {
 
 export function App() {
   const webSocketRef = useRef<MessagingWebSocket | null>(null);
+  const joinedConversationRef = useRef<{
+    conversationId: string;
+    userId: string;
+  } | null>(null);
+  const typingStopTimerRef = useRef<number | null>(null);
+  const typingIndicatorTimerRef = useRef<number | null>(null);
+  const isTypingRef = useRef(false);
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
   const [jwtToken, setJwtToken] = useState(() => loadStoredJwt());
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
@@ -80,6 +90,18 @@ export function App() {
     label: "No file uploaded",
   });
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+
+  useEffect(() => {
+    joinedConversationRef.current = joinedConversation;
+  }, [joinedConversation]);
+
+  useEffect(() => {
+    return () => {
+      clearTypingStopTimer();
+      clearTypingIndicatorTimer();
+    };
+  }, []);
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -137,6 +159,7 @@ export function App() {
     setJoinedConversation(null);
     setMessages([]);
     setComposerNotice(null);
+    resetTypingState();
     webSocketRef.current?.disconnect();
     const client = createMessagingWebSocket(config, jwtToken, {
       onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
@@ -155,12 +178,14 @@ export function App() {
   }
 
   function handleWebSocketDisconnect() {
+    sendTypingStop();
     webSocketRef.current?.disconnect();
     webSocketRef.current = null;
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
     setComposerNotice(null);
+    resetTypingState();
     setWebSocketStatus({ state: "idle", label: "Disconnected" });
   }
 
@@ -207,6 +232,14 @@ export function App() {
         appendMessageIfNew(currentMessages, messageFromServer(event)),
       );
       setComposerNotice(null);
+      return;
+    }
+    if (
+      (event.type === "typing.start" || event.type === "typing.stop") &&
+      "conversation_id" in event &&
+      typeof event.conversation_id === "string"
+    ) {
+      handleTypingEvent(event.type, event.conversation_id);
     }
   }
 
@@ -254,6 +287,7 @@ export function App() {
     }
 
     try {
+      sendTypingStop();
       webSocketRef.current?.send({
         type: "message.send",
         conversation_id: joinedConversation.conversationId,
@@ -272,6 +306,113 @@ export function App() {
       setComposerNotice(
         error instanceof Error ? error.message : "Message send failed",
       );
+    }
+  }
+
+  function handleMessageDraftChange(nextMessage: string) {
+    setMessageDraft(nextMessage);
+
+    if (!nextMessage.trim()) {
+      sendTypingStop();
+      return;
+    }
+
+    sendTypingStart();
+    scheduleTypingStop();
+  }
+
+  function sendTypingStart() {
+    const activeConversation = joinedConversationRef.current;
+    const socket = webSocketRef.current;
+
+    if (!activeConversation || !socket || isTypingRef.current) {
+      return;
+    }
+
+    try {
+      socket.send({
+        type: "typing.start",
+        conversation_id: activeConversation.conversationId,
+      });
+      isTypingRef.current = true;
+    } catch {
+      clearTypingStopTimer();
+    }
+  }
+
+  function sendTypingStop() {
+    const activeConversation = joinedConversationRef.current;
+    const socket = webSocketRef.current;
+
+    clearTypingStopTimer();
+    if (!activeConversation || !socket || !isTypingRef.current) {
+      isTypingRef.current = false;
+      return;
+    }
+
+    try {
+      socket.send({
+        type: "typing.stop",
+        conversation_id: activeConversation.conversationId,
+      });
+    } catch {
+      // The socket may already be closing; the next joined session starts fresh.
+    } finally {
+      isTypingRef.current = false;
+    }
+  }
+
+  function scheduleTypingStop() {
+    clearTypingStopTimer();
+    typingStopTimerRef.current = window.setTimeout(() => {
+      sendTypingStop();
+    }, TYPING_IDLE_TIMEOUT_MS);
+  }
+
+  function handleTypingEvent(
+    eventType: "typing.start" | "typing.stop",
+    eventConversationId: string,
+  ) {
+    const activeConversation = joinedConversationRef.current;
+
+    if (
+      !activeConversation ||
+      activeConversation.conversationId !== eventConversationId
+    ) {
+      return;
+    }
+
+    if (eventType === "typing.stop") {
+      clearTypingIndicatorTimer();
+      setIsOtherUserTyping(false);
+      return;
+    }
+
+    setIsOtherUserTyping(true);
+    clearTypingIndicatorTimer();
+    typingIndicatorTimerRef.current = window.setTimeout(() => {
+      setIsOtherUserTyping(false);
+    }, TYPING_INDICATOR_TIMEOUT_MS);
+  }
+
+  function resetTypingState() {
+    clearTypingStopTimer();
+    clearTypingIndicatorTimer();
+    isTypingRef.current = false;
+    setIsOtherUserTyping(false);
+  }
+
+  function clearTypingStopTimer() {
+    if (typingStopTimerRef.current !== null) {
+      window.clearTimeout(typingStopTimerRef.current);
+      typingStopTimerRef.current = null;
+    }
+  }
+
+  function clearTypingIndicatorTimer() {
+    if (typingIndicatorTimerRef.current !== null) {
+      window.clearTimeout(typingIndicatorTimerRef.current);
+      typingIndicatorTimerRef.current = null;
     }
   }
 
@@ -369,7 +510,8 @@ export function App() {
             webSocketStatus.state !== "connected" || !joinedConversation
           }
           composerNotice={composerNotice}
-          onMessageDraftChange={setMessageDraft}
+          isOtherUserTyping={isOtherUserTyping}
+          onMessageDraftChange={handleMessageDraftChange}
           onSelectedFileChange={handleSelectedFileChange}
           onFileUpload={handleFileUpload}
           onMessageSend={handleMessageSend}
