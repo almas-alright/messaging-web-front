@@ -862,6 +862,7 @@ export function App() {
               ? `Warning: this message may include restricted contact information (${moderationDetection.label}).`
               : null
           }
+          moderationPolicies={moderationPolicyCache?.policies ?? []}
           isOtherUserTyping={isOtherUserTyping}
           onMessageDraftChange={handleMessageDraftChange}
           onSelectedFileChange={handleSelectedFileChange}

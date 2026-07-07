@@ -377,6 +377,30 @@ textarea {
   border-radius: 8px 8px 3px 8px;
 }
 
+.message-bubble--flagged {
+  background: #fff0ee;
+  border-color: #d45b50;
+  box-shadow: 0 8px 18px rgba(180, 61, 50, 0.14);
+}
+
+.message-bubble--flagged footer {
+  color: #7f4a45;
+}
+
+.message-flag-label {
+  background: #b43d32;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 7px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 5px 7px;
+}
+
 .timeline-status,
 .message-empty-state {
   background: #eef3f1;

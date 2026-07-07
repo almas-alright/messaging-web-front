@@ -79,7 +79,9 @@ export type ModerationPolicyType =
   | "word"
   | "phrase"
   | "platform_name"
-  | "communication_app";
+  | "communication_app"
+  | "blocked_word"
+  | "blocked_phrase";
 
 export type ModerationPolicyResponse = {
   key: string;
