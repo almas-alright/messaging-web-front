@@ -3,11 +3,13 @@ import type { ModerationPolicyResponse } from "../api/httpClient";
 export type ModerationDetection = {
   policyKey: string;
   label: string;
+  matchedType: string;
+  matchedText: string;
 };
 
 type DetectionRule = {
   policy: ModerationPolicyResponse;
-  test: (message: string) => boolean;
+  detect: (message: string) => string | null;
 };
 
 const systemDetectors: Record<string, RegExp> = {
@@ -26,10 +28,16 @@ export function detectModerationRisk(
   }
 
   for (const rule of policiesToRules(policies)) {
-    if (rule.test(draft)) {
+    const matchedText = rule.detect(draft);
+    if (matchedText) {
       return {
         policyKey: rule.policy.key,
         label: rule.policy.label,
+        matchedType:
+          rule.policy.type === "system_detector"
+            ? rule.policy.value
+            : rule.policy.type,
+        matchedText,
       };
     }
   }
@@ -59,9 +67,10 @@ function systemDetectorRule(
 
   return {
     policy,
-    test: (message) => {
+    detect: (message) => {
       detector.lastIndex = 0;
-      return detector.test(message);
+      const match = detector.exec(message);
+      return match?.[0] ?? null;
     },
   };
 }
@@ -74,7 +83,16 @@ function textMatchRule(policy: ModerationPolicyResponse): DetectionRule | null {
 
   return {
     policy,
-    test: (message) =>
-      message.toLocaleLowerCase().includes(value.toLocaleLowerCase()),
+    detect: (message) => {
+      const matchIndex = message
+        .toLocaleLowerCase()
+        .indexOf(value.toLocaleLowerCase());
+
+      if (matchIndex < 0) {
+        return null;
+      }
+
+      return message.slice(matchIndex, matchIndex + value.length);
+    },
   };
 }

@@ -8,6 +8,10 @@ export type HttpClient = {
   getModerationPolicies: (
     jwtToken: string,
   ) => Promise<ModerationPolicyListResponse>;
+  createModerationFlag: (
+    jwtToken: string,
+    flag: ModerationFlagCreateRequest,
+  ) => Promise<ModerationFlagResponse>;
   uploadAttachment: (
     jwtToken: string,
     conversationId: string,
@@ -53,6 +57,32 @@ export type ModerationPolicyListResponse = {
   policies: ModerationPolicyResponse[];
 };
 
+export type ModerationFlagCreateRequest = {
+  conversation_id: string;
+  client_message_id?: string;
+  policy_id: string;
+  matched_type: string;
+  matched_text?: string;
+  matched_text_hash?: string;
+  message_excerpt: string;
+  detected_at: string;
+};
+
+export type ModerationFlagResponse = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  client_message_id?: string;
+  policy_id: string;
+  matched_type: string;
+  matched_text_hash?: string;
+  message_excerpt: string;
+  status: string;
+  detected_by: string;
+  detected_at: string;
+  created_at: string;
+};
+
 export type AttachmentResponse = {
   id: string;
   conversation_id: string;
@@ -72,6 +102,10 @@ export function createHttpClient(config: AppConfig): HttpClient {
       getCurrentUser(config.apiBaseUrl, jwtToken),
     getModerationPolicies: (jwtToken: string) =>
       getModerationPolicies(config.apiBaseUrl, jwtToken),
+    createModerationFlag: (
+      jwtToken: string,
+      flag: ModerationFlagCreateRequest,
+    ) => createModerationFlag(config.apiBaseUrl, jwtToken, flag),
     uploadAttachment: (jwtToken: string, conversationId: string, file: File) =>
       uploadAttachment(config.apiBaseUrl, jwtToken, conversationId, file),
   };
@@ -107,6 +141,25 @@ async function getModerationPolicies(apiBaseUrl: string, jwtToken: string) {
     throw new Error(`/moderation/policies returned ${response.status}`);
   }
   return response.json() as Promise<ModerationPolicyListResponse>;
+}
+
+async function createModerationFlag(
+  apiBaseUrl: string,
+  jwtToken: string,
+  flag: ModerationFlagCreateRequest,
+) {
+  const response = await fetch(`${apiBaseUrl}/moderation/flags`, {
+    body: JSON.stringify(flag),
+    headers: {
+      Authorization: `Bearer ${jwtToken.trim()}`,
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`/moderation/flags returned ${response.status}`);
+  }
+  return response.json() as Promise<ModerationFlagResponse>;
 }
 
 async function uploadAttachment(

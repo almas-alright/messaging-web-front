@@ -15,7 +15,10 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
 import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
-import { detectModerationRisk } from "./moderation/detection";
+import {
+  detectModerationRisk,
+  type ModerationDetection,
+} from "./moderation/detection";
 import {
   loadCachedModerationPolicies,
   saveCachedModerationPolicies,
@@ -31,6 +34,7 @@ import type { ChatMessage, ConnectionState } from "./types/chat";
 
 const TYPING_IDLE_TIMEOUT_MS = 1500;
 const TYPING_INDICATOR_TIMEOUT_MS = 3000;
+const MODERATION_FLAG_IDLE_TIMEOUT_MS = 800;
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -60,7 +64,10 @@ export function App() {
   } | null>(null);
   const typingStopTimerRef = useRef<number | null>(null);
   const typingIndicatorTimerRef = useRef<number | null>(null);
+  const moderationFlagTimerRef = useRef<number | null>(null);
   const isTypingRef = useRef(false);
+  const draftClientMessageIdRef = useRef<string | null>(null);
+  const submittedModerationFlagKeysRef = useRef<Set<string>>(new Set());
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
   const [jwtToken, setJwtToken] = useState(() => loadStoredJwt());
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
@@ -124,9 +131,56 @@ export function App() {
   }, [config.apiBaseUrl, currentUser, jwtToken]);
 
   useEffect(() => {
+    clearModerationFlagTimer();
+
+    const activeConversation = joinedConversation;
+    const draft = messageDraft.trim();
+    if (
+      !moderationDetection ||
+      !activeConversation ||
+      !draft ||
+      !jwtToken.trim()
+    ) {
+      return;
+    }
+
+    moderationFlagTimerRef.current = window.setTimeout(() => {
+      const clientMessageId = ensureDraftClientMessageId();
+      const dedupeKey = buildModerationFlagDedupeKey(
+        activeConversation.conversationId,
+        clientMessageId,
+        moderationDetection,
+      );
+
+      if (submittedModerationFlagKeysRef.current.has(dedupeKey)) {
+        return;
+      }
+
+      submittedModerationFlagKeysRef.current.add(dedupeKey);
+      void createHttpClient(config)
+        .createModerationFlag(jwtToken, {
+          conversation_id: activeConversation.conversationId,
+          client_message_id: clientMessageId,
+          policy_id: moderationDetection.policyKey,
+          matched_type: moderationDetection.matchedType,
+          matched_text: moderationDetection.matchedText,
+          message_excerpt: buildModerationMessageExcerpt(
+            draft,
+            moderationDetection.matchedText,
+          ),
+          detected_at: new Date().toISOString(),
+        })
+        .catch(() => {
+          // Keep the local warning responsive even when flag submission fails.
+        });
+    }, MODERATION_FLAG_IDLE_TIMEOUT_MS);
+  }, [config, joinedConversation, jwtToken, messageDraft, moderationDetection]);
+
+  useEffect(() => {
     return () => {
       clearTypingStopTimer();
       clearTypingIndicatorTimer();
+      clearModerationFlagTimer();
     };
   }, []);
 
@@ -336,14 +390,16 @@ export function App() {
 
     try {
       sendTypingStop();
+      const clientMessageId = ensureDraftClientMessageId();
       webSocketRef.current?.send({
         type: "message.send",
         conversation_id: joinedConversation.conversationId,
-        client_message_id: createClientMessageId(),
+        client_message_id: clientMessageId,
         body: body || undefined,
         attachment_id: attachment?.id,
       });
       setMessageDraft("");
+      draftClientMessageIdRef.current = null;
       if (attachment) {
         setSelectedFile(null);
         setUploadedAttachment(null);
@@ -361,12 +417,23 @@ export function App() {
     setMessageDraft(nextMessage);
 
     if (!nextMessage.trim()) {
+      draftClientMessageIdRef.current = null;
+      clearModerationFlagTimer();
       sendTypingStop();
       return;
     }
 
+    ensureDraftClientMessageId();
     sendTypingStart();
     scheduleTypingStop();
+  }
+
+  function ensureDraftClientMessageId() {
+    if (!draftClientMessageIdRef.current) {
+      draftClientMessageIdRef.current = createClientMessageId();
+    }
+
+    return draftClientMessageIdRef.current;
   }
 
   function sendTypingStart() {
@@ -461,6 +528,13 @@ export function App() {
     if (typingIndicatorTimerRef.current !== null) {
       window.clearTimeout(typingIndicatorTimerRef.current);
       typingIndicatorTimerRef.current = null;
+    }
+  }
+
+  function clearModerationFlagTimer() {
+    if (moderationFlagTimerRef.current !== null) {
+      window.clearTimeout(moderationFlagTimerRef.current);
+      moderationFlagTimerRef.current = null;
     }
   }
 
@@ -591,6 +665,40 @@ function appendMessageIfNew(
   }
 
   return [...messages, nextMessage];
+}
+
+function buildModerationFlagDedupeKey(
+  conversationId: string,
+  clientMessageId: string,
+  detection: ModerationDetection,
+) {
+  return [
+    conversationId,
+    clientMessageId,
+    detection.policyKey,
+    detection.matchedType,
+    detection.matchedText.trim().toLocaleLowerCase(),
+  ].join("|");
+}
+
+function buildModerationMessageExcerpt(message: string, matchedText: string) {
+  const sanitizedMessage = matchedText.trim()
+    ? message.replace(new RegExp(escapeRegExp(matchedText), "gi"), "[redacted]")
+    : message;
+
+  return truncateText(sanitizedMessage.trim(), 160);
+}
+
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function isMessageCreatedEvent(event: ServerEvent): event is MessageCreatedEvent {
