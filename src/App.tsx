@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createHttpClient,
   type AttachmentResponse,
   type CurrentUserResponse,
+  type ModerationPolicyListResponse,
 } from "./api/httpClient";
 import {
   clearStoredJwt,
@@ -14,6 +15,12 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
 import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
+import { detectModerationRisk } from "./moderation/detection";
+import {
+  loadCachedModerationPolicies,
+  saveCachedModerationPolicies,
+  type CachedModerationPolicies,
+} from "./moderation/policyCache";
 import {
   createMessagingWebSocket,
   type MessageCreatedEvent,
@@ -91,10 +98,30 @@ export function App() {
   });
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const [moderationPolicyCache, setModerationPolicyCache] =
+    useState<CachedModerationPolicies | null>(() =>
+      loadCachedModerationPolicies(),
+    );
+  const moderationDetection = useMemo(
+    () =>
+      detectModerationRisk(
+        messageDraft,
+        moderationPolicyCache?.policies ?? [],
+      ),
+    [messageDraft, moderationPolicyCache],
+  );
 
   useEffect(() => {
     joinedConversationRef.current = joinedConversation;
   }, [joinedConversation]);
+
+  useEffect(() => {
+    if (!currentUser || !jwtToken.trim()) {
+      return;
+    }
+
+    void refreshModerationPolicies();
+  }, [config.apiBaseUrl, currentUser, jwtToken]);
 
   useEffect(() => {
     return () => {
@@ -151,6 +178,27 @@ export function App() {
           error instanceof Error ? error.message : "Current user check failed",
       });
     }
+  }
+
+  async function refreshModerationPolicies() {
+    try {
+      const response = await createHttpClient(config).getModerationPolicies(
+        jwtToken,
+      );
+      updateModerationPolicyCache(response);
+    } catch {
+      // Cached policies continue to support local detection while offline.
+    }
+  }
+
+  function updateModerationPolicyCache(response: ModerationPolicyListResponse) {
+    setModerationPolicyCache((currentCache) => {
+      if (currentCache?.version === response.version) {
+        return currentCache;
+      }
+
+      return saveCachedModerationPolicies(response);
+    });
   }
 
   function handleWebSocketConnect() {
@@ -510,6 +558,11 @@ export function App() {
             webSocketStatus.state !== "connected" || !joinedConversation
           }
           composerNotice={composerNotice}
+          moderationWarning={
+            moderationDetection
+              ? `Warning: this message may include restricted contact information (${moderationDetection.label}).`
+              : null
+          }
           isOtherUserTyping={isOtherUserTyping}
           onMessageDraftChange={handleMessageDraftChange}
           onSelectedFileChange={handleSelectedFileChange}

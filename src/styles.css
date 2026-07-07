@@ -542,6 +542,11 @@ textarea {
   box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.12);
 }
 
+.composer-input-stack textarea.composer-textarea--risky {
+  border-color: #c5493c;
+  box-shadow: 0 0 0 3px rgba(197, 73, 60, 0.12);
+}
+
 .typing-indicator {
   animation: typing-pen-bounce 0.9s ease-in-out infinite;
   display: inline-flex;
@@ -553,6 +558,12 @@ textarea {
 .composer-notice {
   color: #66736d;
   font-size: 0.78rem;
+}
+
+.composer-warning {
+  color: #b43d32;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .composer-send-button {

@@ -28,6 +28,7 @@ type ChatPanelProps = {
   canSendMessage: boolean;
   isComposerDisabled: boolean;
   composerNotice: string | null;
+  moderationWarning: string | null;
   isOtherUserTyping: boolean;
   onMessageDraftChange: (message: string) => void;
   onSelectedFileChange: (file: File | null) => void;
@@ -50,6 +51,7 @@ export function ChatPanel({
   canSendMessage,
   isComposerDisabled,
   composerNotice,
+  moderationWarning,
   isOtherUserTyping,
   onMessageDraftChange,
   onSelectedFileChange,
@@ -281,6 +283,7 @@ export function ChatPanel({
           ) : null}
           <textarea
             aria-label="Message text"
+            className={moderationWarning ? "composer-textarea--risky" : ""}
             disabled={isComposerDisabled}
             onKeyDown={handleComposerKeyDown}
             onChange={(event) => onMessageDraftChange(event.target.value)}
@@ -304,6 +307,11 @@ export function ChatPanel({
           ) : null}
           {composerNotice ? (
             <span className="composer-notice">{composerNotice}</span>
+          ) : null}
+          {moderationWarning ? (
+            <span className="composer-warning" role="status">
+              {moderationWarning}
+            </span>
           ) : null}
         </div>
         <button

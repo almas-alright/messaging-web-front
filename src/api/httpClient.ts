@@ -5,6 +5,9 @@ export type HttpClient = {
   getHealth: () => Promise<BackendCheckResponse>;
   getReady: () => Promise<BackendCheckResponse>;
   getCurrentUser: (jwtToken: string) => Promise<CurrentUserResponse>;
+  getModerationPolicies: (
+    jwtToken: string,
+  ) => Promise<ModerationPolicyListResponse>;
   uploadAttachment: (
     jwtToken: string,
     conversationId: string,
@@ -21,6 +24,33 @@ export type CurrentUserResponse = {
   user_id: string;
   display_name: string;
   role: "buyer" | "seller" | "admin";
+};
+
+export type ModerationPolicyType =
+  | "system_detector"
+  | "word"
+  | "phrase"
+  | "platform_name"
+  | "communication_app";
+
+export type ModerationPolicyResponse = {
+  key: string;
+  label: string;
+  type: ModerationPolicyType;
+  value: string;
+  severity: "low" | "medium" | "high" | "critical";
+  action:
+    | "allow"
+    | "warn"
+    | "flag"
+    | "block"
+    | "restrict_conversation"
+    | "escalate_support";
+};
+
+export type ModerationPolicyListResponse = {
+  version: string;
+  policies: ModerationPolicyResponse[];
 };
 
 export type AttachmentResponse = {
@@ -40,6 +70,8 @@ export function createHttpClient(config: AppConfig): HttpClient {
     getReady: () => getBackendCheck(config.apiBaseUrl, "/ready"),
     getCurrentUser: (jwtToken: string) =>
       getCurrentUser(config.apiBaseUrl, jwtToken),
+    getModerationPolicies: (jwtToken: string) =>
+      getModerationPolicies(config.apiBaseUrl, jwtToken),
     uploadAttachment: (jwtToken: string, conversationId: string, file: File) =>
       uploadAttachment(config.apiBaseUrl, jwtToken, conversationId, file),
   };
@@ -63,6 +95,18 @@ async function getCurrentUser(apiBaseUrl: string, jwtToken: string) {
     throw new Error(`/auth/me returned ${response.status}`);
   }
   return response.json() as Promise<CurrentUserResponse>;
+}
+
+async function getModerationPolicies(apiBaseUrl: string, jwtToken: string) {
+  const response = await fetch(`${apiBaseUrl}/moderation/policies`, {
+    headers: {
+      Authorization: `Bearer ${jwtToken.trim()}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`/moderation/policies returned ${response.status}`);
+  }
+  return response.json() as Promise<ModerationPolicyListResponse>;
 }
 
 async function uploadAttachment(
