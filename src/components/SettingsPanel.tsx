@@ -32,7 +32,7 @@ type SettingsPanelProps = {
   onWebSocketReconnect: () => void;
   onWebSocketDisconnect: () => void;
   onConversationJoin: () => void;
-  onConversationHistory: () => void;
+  onConversationHistory: () => Promise<void>;
   onCheckHealth: () => void;
   onCheckReady: () => void;
 };
@@ -217,7 +217,7 @@ export function SettingsPanel({
           onClick={onConversationHistory}
           disabled={!joinedConversation}
         >
-          Load history
+          Load latest
         </button>
         <ul className="plain-list">
           <li>Render returned messages</li>

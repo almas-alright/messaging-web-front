@@ -5,9 +5,22 @@ export type HttpClient = {
   getHealth: () => Promise<BackendCheckResponse>;
   getReady: () => Promise<BackendCheckResponse>;
   getCurrentUser: (jwtToken: string) => Promise<CurrentUserResponse>;
+  getConversationMessages: (
+    jwtToken: string,
+    conversationId: string,
+    query?: ConversationMessagesQuery,
+  ) => Promise<ConversationMessagesResponse>;
   getModerationPolicies: (
     jwtToken: string,
   ) => Promise<ModerationPolicyListResponse>;
+  getAdminModerationFlags: (
+    jwtToken: string,
+  ) => Promise<AdminModerationFlagResponse[]>;
+  updateAdminModerationFlag: (
+    jwtToken: string,
+    flagId: string,
+    update: AdminModerationFlagUpdateRequest,
+  ) => Promise<AdminModerationFlagResponse>;
   createModerationFlag: (
     jwtToken: string,
     flag: ModerationFlagCreateRequest,
@@ -28,6 +41,37 @@ export type CurrentUserResponse = {
   user_id: string;
   display_name: string;
   role: "buyer" | "seller" | "admin";
+};
+
+export type ConversationMessagesQuery = {
+  limit?: number;
+  before?: string;
+  after?: string;
+  from?: string;
+  to?: string;
+};
+
+export type ConversationMessageResponse = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  client_message_id?: string;
+  body: string;
+  message_type: "text" | "file" | "system";
+  policy_status: "clean" | "flagged" | "blocked";
+  attachment_id?: string;
+  created_at: string;
+};
+
+export type ConversationMessagesResponse = {
+  conversation_id: string;
+  messages: ConversationMessageResponse[];
+  pagination: {
+    limit: number;
+    has_more: boolean;
+    next_before?: string;
+    next_cursor?: string;
+  };
 };
 
 export type ModerationPolicyType =
@@ -83,6 +127,30 @@ export type ModerationFlagResponse = {
   created_at: string;
 };
 
+export type AdminModerationFlagStatus =
+  | "open"
+  | "reviewed"
+  | "ignored"
+  | "escalated";
+
+export type AdminModerationFlagResponse = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  policy_id?: string;
+  matched_type: string;
+  message_excerpt?: string;
+  severity: "low" | "medium" | "high" | "critical";
+  status: AdminModerationFlagStatus;
+  detected_by?: string;
+  detected_at?: string;
+  created_at: string;
+};
+
+export type AdminModerationFlagUpdateRequest = {
+  status: Exclude<AdminModerationFlagStatus, "open">;
+};
+
 export type AttachmentResponse = {
   id: string;
   conversation_id: string;
@@ -100,8 +168,20 @@ export function createHttpClient(config: AppConfig): HttpClient {
     getReady: () => getBackendCheck(config.apiBaseUrl, "/ready"),
     getCurrentUser: (jwtToken: string) =>
       getCurrentUser(config.apiBaseUrl, jwtToken),
+    getConversationMessages: (
+      jwtToken: string,
+      conversationId: string,
+      query?: ConversationMessagesQuery,
+    ) => getConversationMessages(config.apiBaseUrl, jwtToken, conversationId, query),
     getModerationPolicies: (jwtToken: string) =>
       getModerationPolicies(config.apiBaseUrl, jwtToken),
+    getAdminModerationFlags: (jwtToken: string) =>
+      getAdminModerationFlags(config.apiBaseUrl, jwtToken),
+    updateAdminModerationFlag: (
+      jwtToken: string,
+      flagId: string,
+      update: AdminModerationFlagUpdateRequest,
+    ) => updateAdminModerationFlag(config.apiBaseUrl, jwtToken, flagId, update),
     createModerationFlag: (
       jwtToken: string,
       flag: ModerationFlagCreateRequest,
@@ -129,6 +209,48 @@ async function getCurrentUser(apiBaseUrl: string, jwtToken: string) {
     throw new Error(`/auth/me returned ${response.status}`);
   }
   return response.json() as Promise<CurrentUserResponse>;
+}
+
+async function getConversationMessages(
+  apiBaseUrl: string,
+  jwtToken: string,
+  conversationId: string,
+  query: ConversationMessagesQuery = {},
+) {
+  const params = new URLSearchParams();
+  if (query.limit) {
+    params.set("limit", String(query.limit));
+  }
+  if (query.before) {
+    params.set("before", query.before);
+  }
+  if (query.after) {
+    params.set("after", query.after);
+  }
+  if (query.from) {
+    params.set("from", query.from);
+  }
+  if (query.to) {
+    params.set("to", query.to);
+  }
+
+  const queryString = params.toString();
+  const response = await fetch(
+    `${apiBaseUrl}/conversations/${encodeURIComponent(
+      conversationId,
+    )}/messages${queryString ? `?${queryString}` : ""}`,
+    {
+      headers: {
+        Authorization: `Bearer ${jwtToken.trim()}`,
+      },
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `/conversations/${conversationId}/messages returned ${response.status}`,
+    );
+  }
+  return response.json() as Promise<ConversationMessagesResponse>;
 }
 
 async function getModerationPolicies(apiBaseUrl: string, jwtToken: string) {
@@ -160,6 +282,43 @@ async function createModerationFlag(
     throw new Error(`/moderation/flags returned ${response.status}`);
   }
   return response.json() as Promise<ModerationFlagResponse>;
+}
+
+async function getAdminModerationFlags(apiBaseUrl: string, jwtToken: string) {
+  const response = await fetch(`${apiBaseUrl}/admin/moderation/flags`, {
+    headers: {
+      Authorization: `Bearer ${jwtToken.trim()}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`/admin/moderation/flags returned ${response.status}`);
+  }
+  return response.json() as Promise<AdminModerationFlagResponse[]>;
+}
+
+async function updateAdminModerationFlag(
+  apiBaseUrl: string,
+  jwtToken: string,
+  flagId: string,
+  update: AdminModerationFlagUpdateRequest,
+) {
+  const response = await fetch(
+    `${apiBaseUrl}/admin/moderation/flags/${encodeURIComponent(flagId)}`,
+    {
+      body: JSON.stringify(update),
+      headers: {
+        Authorization: `Bearer ${jwtToken.trim()}`,
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `/admin/moderation/flags/${flagId} returned ${response.status}`,
+    );
+  }
+  return response.json() as Promise<AdminModerationFlagResponse>;
 }
 
 async function uploadAttachment(

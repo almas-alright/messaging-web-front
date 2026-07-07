@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  type AdminModerationFlagResponse,
+  type AdminModerationFlagStatus,
   createHttpClient,
   type AttachmentResponse,
+  type ConversationMessageResponse,
+  type ConversationMessagesResponse,
   type CurrentUserResponse,
   type ModerationPolicyListResponse,
 } from "./api/httpClient";
@@ -11,6 +15,7 @@ import {
   saveStoredJwt,
 } from "./auth/demoAuthStorage";
 import { AppShell } from "./components/AppShell";
+import { AdminModerationPanel } from "./components/AdminModerationPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
 import { loadStoredConfig, saveStoredConfig } from "./config/storage";
@@ -35,6 +40,7 @@ import type { ChatMessage, ConnectionState } from "./types/chat";
 const TYPING_IDLE_TIMEOUT_MS = 1500;
 const TYPING_INDICATOR_TIMEOUT_MS = 3000;
 const MODERATION_FLAG_IDLE_TIMEOUT_MS = 800;
+const MESSAGE_HISTORY_PAGE_SIZE = 30;
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -53,6 +59,21 @@ type WebSocketStatus = {
 
 type UploadStatus = {
   state: "idle" | "uploading" | "uploaded" | "error";
+  label: string;
+};
+
+type MessageHistoryStatus = {
+  state: "idle" | "loading" | "loadingOlder" | "ok" | "error";
+  label: string;
+};
+
+type MessageHistoryPagination = {
+  hasMore: boolean;
+  nextBefore: string | null;
+};
+
+type AdminFlagsStatus = {
+  state: "idle" | "loading" | "ok" | "error";
   label: string;
 };
 
@@ -92,6 +113,16 @@ export function App() {
     userId: string;
   } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageHistoryStatus, setMessageHistoryStatus] =
+    useState<MessageHistoryStatus>({
+      state: "idle",
+      label: "Not loaded",
+    });
+  const [messageHistoryPagination, setMessageHistoryPagination] =
+    useState<MessageHistoryPagination>({
+      hasMore: false,
+      nextBefore: null,
+    });
   const [messageDraft, setMessageDraft] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedAttachment, setUploadedAttachment] =
@@ -109,6 +140,16 @@ export function App() {
     useState<CachedModerationPolicies | null>(() =>
       loadCachedModerationPolicies(),
     );
+  const [adminModerationFlags, setAdminModerationFlags] = useState<
+    AdminModerationFlagResponse[]
+  >([]);
+  const [adminFlagsStatus, setAdminFlagsStatus] = useState<AdminFlagsStatus>({
+    state: "idle",
+    label: "Not loaded",
+  });
+  const [updatingAdminFlagId, setUpdatingAdminFlagId] = useState<string | null>(
+    null,
+  );
   const moderationDetection = useMemo(
     () =>
       detectModerationRisk(
@@ -124,10 +165,18 @@ export function App() {
 
   useEffect(() => {
     if (!currentUser || !jwtToken.trim()) {
+      setAdminModerationFlags([]);
+      setAdminFlagsStatus({ state: "idle", label: "Not loaded" });
       return;
     }
 
     void refreshModerationPolicies();
+    if (currentUser.role === "admin") {
+      void handleAdminFlagsRefresh();
+    } else {
+      setAdminModerationFlags([]);
+      setAdminFlagsStatus({ state: "idle", label: "Admin JWT required" });
+    }
   }, [config.apiBaseUrl, currentUser, jwtToken]);
 
   useEffect(() => {
@@ -245,6 +294,70 @@ export function App() {
     }
   }
 
+  async function handleAdminFlagsRefresh() {
+    if (!jwtToken.trim()) {
+      return;
+    }
+
+    setAdminFlagsStatus({
+      state: "loading",
+      label: "Loading moderation flags",
+    });
+    try {
+      const flags = await createHttpClient(config).getAdminModerationFlags(
+        jwtToken,
+      );
+      setAdminModerationFlags(flags);
+      setAdminFlagsStatus({
+        state: "ok",
+        label: `${flags.length} flag${flags.length === 1 ? "" : "s"} loaded`,
+      });
+    } catch (error) {
+      setAdminFlagsStatus({
+        state: "error",
+        label:
+          error instanceof Error
+            ? error.message
+            : "Moderation flags load failed",
+      });
+    }
+  }
+
+  async function handleAdminFlagStatusUpdate(
+    flagId: string,
+    status: Exclude<AdminModerationFlagStatus, "open">,
+  ) {
+    if (!jwtToken.trim()) {
+      return;
+    }
+
+    setUpdatingAdminFlagId(flagId);
+    try {
+      const updatedFlag = await createHttpClient(config).updateAdminModerationFlag(
+        jwtToken,
+        flagId,
+        { status },
+      );
+      setAdminModerationFlags((currentFlags) =>
+        currentFlags.map((flag) =>
+          flag.id === updatedFlag.id ? updatedFlag : flag,
+        ),
+      );
+      setAdminFlagsStatus({
+        state: "ok",
+        label: `Flag ${updatedFlag.id} marked ${updatedFlag.status}`,
+      });
+    } catch (error) {
+      setAdminFlagsStatus({
+        state: "error",
+        label:
+          error instanceof Error ? error.message : "Flag status update failed",
+      });
+    } finally {
+      setUpdatingAdminFlagId(null);
+    }
+  }
+
   function updateModerationPolicyCache(response: ModerationPolicyListResponse) {
     setModerationPolicyCache((currentCache) => {
       if (currentCache?.version === response.version) {
@@ -260,6 +373,7 @@ export function App() {
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
+    resetMessageHistoryState();
     setComposerNotice(null);
     resetTypingState();
     webSocketRef.current?.disconnect();
@@ -286,6 +400,7 @@ export function App() {
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
+    resetMessageHistoryState();
     setComposerNotice(null);
     resetTypingState();
     setWebSocketStatus({ state: "idle", label: "Disconnected" });
@@ -315,6 +430,8 @@ export function App() {
         conversationId: event.conversation_id,
         userId: event.user_id,
       });
+      setMessages([]);
+      resetMessageHistoryState();
       return;
     }
     if (
@@ -363,6 +480,17 @@ export function App() {
     };
   }
 
+  function messageFromHistoryItem(item: ConversationMessageResponse): ChatMessage {
+    return {
+      id: item.id,
+      conversationId: item.conversation_id,
+      senderId: item.sender_id,
+      body: item.body,
+      createdAt: item.created_at || new Date().toISOString(),
+      attachmentId: item.attachment_id,
+    };
+  }
+
   function handleConversationJoin() {
     webSocketRef.current?.send({
       type: "conversation.join",
@@ -370,14 +498,77 @@ export function App() {
     });
   }
 
-  function handleConversationHistory() {
-    if (!joinedConversation) {
+  async function handleConversationHistory() {
+    if (!joinedConversation || !jwtToken.trim()) {
       return;
     }
-    webSocketRef.current?.send({
-      type: "conversation.history",
-      conversation_id: joinedConversation.conversationId,
+
+    setMessageHistoryStatus({
+      state: "loading",
+      label: "Loading latest messages",
     });
+    setComposerNotice(null);
+    try {
+      const response = await createHttpClient(config).getConversationMessages(
+        jwtToken,
+        joinedConversation.conversationId,
+        { limit: MESSAGE_HISTORY_PAGE_SIZE },
+      );
+      setMessages(response.messages.map(messageFromHistoryItem));
+      updateMessageHistoryPagination(response);
+      setMessageHistoryStatus({
+        state: "ok",
+        label: `${response.messages.length} latest messages loaded`,
+      });
+    } catch (error) {
+      setMessageHistoryStatus({
+        state: "error",
+        label: error instanceof Error ? error.message : "History load failed",
+      });
+    }
+  }
+
+  async function handleOlderMessagesLoad() {
+    if (
+      !joinedConversation ||
+      !jwtToken.trim() ||
+      !messageHistoryPagination.hasMore ||
+      !messageHistoryPagination.nextBefore ||
+      messageHistoryStatus.state === "loading" ||
+      messageHistoryStatus.state === "loadingOlder"
+    ) {
+      return;
+    }
+
+    setMessageHistoryStatus({
+      state: "loadingOlder",
+      label: "Loading older messages",
+    });
+    try {
+      const response = await createHttpClient(config).getConversationMessages(
+        jwtToken,
+        joinedConversation.conversationId,
+        {
+          limit: MESSAGE_HISTORY_PAGE_SIZE,
+          before: messageHistoryPagination.nextBefore,
+        },
+      );
+      const olderMessages = response.messages.map(messageFromHistoryItem);
+      setMessages((currentMessages) =>
+        prependMessagesIfNew(currentMessages, olderMessages),
+      );
+      updateMessageHistoryPagination(response);
+      setMessageHistoryStatus({
+        state: "ok",
+        label: `${olderMessages.length} older messages loaded`,
+      });
+    } catch (error) {
+      setMessageHistoryStatus({
+        state: "error",
+        label:
+          error instanceof Error ? error.message : "Older messages load failed",
+      });
+    }
   }
 
   function handleMessageSend() {
@@ -589,38 +780,72 @@ export function App() {
     }
   }
 
+  function updateMessageHistoryPagination(response: ConversationMessagesResponse) {
+    setMessageHistoryPagination({
+      hasMore: response.pagination.has_more,
+      nextBefore:
+        response.pagination.next_before ||
+        response.pagination.next_cursor ||
+        null,
+    });
+  }
+
+  function resetMessageHistoryState() {
+    setMessageHistoryStatus({
+      state: "idle",
+      label: "Not loaded",
+    });
+    setMessageHistoryPagination({
+      hasMore: false,
+      nextBefore: null,
+    });
+  }
+
   return (
     <AppShell>
       <div className="demo-layout">
-        <SettingsPanel
-          config={config}
-          backendStatus={backendStatus}
-          authStatus={authStatus}
-          webSocketStatus={webSocketStatus}
-          readyUserId={readyUserId}
-          joinedConversation={joinedConversation}
-          conversationId={conversationId}
-          jwtToken={jwtToken}
-          currentUser={currentUser}
-          onConfigChange={handleConfigChange}
-          onJwtTokenChange={handleJwtTokenChange}
-          onJwtClear={handleJwtClear}
-          onConversationIdChange={setConversationId}
-          onCheckCurrentUser={handleCurrentUserCheck}
-          onWebSocketConnect={handleWebSocketConnect}
-          onWebSocketReconnect={handleWebSocketReconnect}
-          onWebSocketDisconnect={handleWebSocketDisconnect}
-          onConversationJoin={handleConversationJoin}
-          onConversationHistory={handleConversationHistory}
-          onCheckHealth={handleHealthCheck}
-          onCheckReady={handleReadyCheck}
-        />
+        <div className="side-panel-stack">
+          <SettingsPanel
+            config={config}
+            backendStatus={backendStatus}
+            authStatus={authStatus}
+            webSocketStatus={webSocketStatus}
+            readyUserId={readyUserId}
+            joinedConversation={joinedConversation}
+            conversationId={conversationId}
+            jwtToken={jwtToken}
+            currentUser={currentUser}
+            onConfigChange={handleConfigChange}
+            onJwtTokenChange={handleJwtTokenChange}
+            onJwtClear={handleJwtClear}
+            onConversationIdChange={setConversationId}
+            onCheckCurrentUser={handleCurrentUserCheck}
+            onWebSocketConnect={handleWebSocketConnect}
+            onWebSocketReconnect={handleWebSocketReconnect}
+            onWebSocketDisconnect={handleWebSocketDisconnect}
+            onConversationJoin={handleConversationJoin}
+            onConversationHistory={handleConversationHistory}
+            onCheckHealth={handleHealthCheck}
+            onCheckReady={handleReadyCheck}
+          />
+          {currentUser?.role === "admin" ? (
+            <AdminModerationPanel
+              flags={adminModerationFlags}
+              status={adminFlagsStatus}
+              updatingFlagId={updatingAdminFlagId}
+              onRefresh={handleAdminFlagsRefresh}
+              onStatusUpdate={handleAdminFlagStatusUpdate}
+            />
+          ) : null}
+        </div>
         <ChatPanel
           connectionState={webSocketStatus}
           readyUserId={readyUserId}
           conversationId={conversationId}
           joinedConversation={joinedConversation}
           messages={messages}
+          historyStatus={messageHistoryStatus}
+          hasOlderMessages={messageHistoryPagination.hasMore}
           attachmentMetadataById={attachmentMetadataById}
           attachmentBaseUrl={config.apiBaseUrl}
           messageDraft={messageDraft}
@@ -641,6 +866,7 @@ export function App() {
           onMessageDraftChange={handleMessageDraftChange}
           onSelectedFileChange={handleSelectedFileChange}
           onFileUpload={handleFileUpload}
+          onLoadOlderMessages={handleOlderMessagesLoad}
           onMessageSend={handleMessageSend}
         />
       </div>
@@ -665,6 +891,18 @@ function appendMessageIfNew(
   }
 
   return [...messages, nextMessage];
+}
+
+function prependMessagesIfNew(
+  messages: ChatMessage[],
+  olderMessages: ChatMessage[],
+) {
+  const existingIds = new Set(messages.map((message) => message.id));
+  const uniqueOlderMessages = olderMessages.filter(
+    (message) => !existingIds.has(message.id),
+  );
+
+  return [...uniqueOlderMessages, ...messages];
 }
 
 function buildModerationFlagDedupeKey(

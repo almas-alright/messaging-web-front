@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { AttachmentResponse } from "../../api/httpClient";
 import type { ChatMessage, ConnectionState } from "../../types/chat";
 
@@ -27,6 +27,11 @@ type ChatPanelProps = {
     userId: string;
   } | null;
   messages: ChatMessage[];
+  historyStatus: {
+    state: "idle" | "loading" | "loadingOlder" | "ok" | "error";
+    label: string;
+  };
+  hasOlderMessages: boolean;
   attachmentMetadataById: Record<string, AttachmentResponse>;
   attachmentBaseUrl: string;
   messageDraft: string;
@@ -44,6 +49,7 @@ type ChatPanelProps = {
   onMessageDraftChange: (message: string) => void;
   onSelectedFileChange: (file: File | null) => void;
   onFileUpload: () => void;
+  onLoadOlderMessages: () => void;
   onMessageSend: () => void;
 };
 
@@ -53,6 +59,8 @@ export function ChatPanel({
   conversationId,
   joinedConversation,
   messages,
+  historyStatus,
+  hasOlderMessages,
   attachmentMetadataById,
   attachmentBaseUrl,
   messageDraft,
@@ -67,12 +75,39 @@ export function ChatPanel({
   onMessageDraftChange,
   onSelectedFileChange,
   onFileUpload,
+  onLoadOlderMessages,
   onMessageSend,
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
   const timelineItems = buildMessageTimeline(messages);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+  const previousFirstMessageIdRef = useRef("");
+  const previousScrollHeightRef = useRef<number | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const messageList = messageListRef.current;
+    const firstMessageId = messages[0]?.id ?? "";
+
+    if (!messageList) {
+      previousFirstMessageIdRef.current = firstMessageId;
+      return;
+    }
+
+    if (
+      previousScrollHeightRef.current !== null &&
+      previousFirstMessageIdRef.current &&
+      firstMessageId !== previousFirstMessageIdRef.current
+    ) {
+      const heightDelta =
+        messageList.scrollHeight - previousScrollHeightRef.current;
+      messageList.scrollTop += heightDelta;
+      previousScrollHeightRef.current = null;
+    }
+
+    previousFirstMessageIdRef.current = firstMessageId;
+  }, [messages]);
 
   function handleEmojiSelect(emoji: string) {
     const textArea = textAreaRef.current;
@@ -107,6 +142,22 @@ export function ChatPanel({
     }
   }
 
+  function handleMessageListScroll() {
+    const messageList = messageListRef.current;
+    if (
+      !messageList ||
+      !hasOlderMessages ||
+      historyStatus.state === "loading" ||
+      historyStatus.state === "loadingOlder" ||
+      messageList.scrollTop > 64
+    ) {
+      return;
+    }
+
+    previousScrollHeightRef.current = messageList.scrollHeight;
+    onLoadOlderMessages();
+  }
+
   return (
     <section className="chat-panel" aria-label="Chat area">
       <div className="chat-panel__header">
@@ -126,7 +177,22 @@ export function ChatPanel({
         </span>
       </div>
 
-      <div className="message-list" aria-label="Messages">
+      <div
+        className="message-list"
+        aria-label="Messages"
+        onScroll={handleMessageListScroll}
+        ref={messageListRef}
+      >
+        {historyStatus.state === "loading" ||
+        historyStatus.state === "loadingOlder" ||
+        historyStatus.state === "error" ? (
+          <article
+            className={`timeline-status timeline-status--${historyStatus.state}`}
+            role={historyStatus.state === "error" ? "alert" : "status"}
+          >
+            <p>{historyStatus.label}</p>
+          </article>
+        ) : null}
         {readyUserId ? (
           <article className="timeline-status">
             <p>WebSocket accepted JWT for {readyUserId}.</p>

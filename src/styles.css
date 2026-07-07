@@ -63,10 +63,17 @@ textarea {
 }
 
 .settings-panel,
-.chat-panel {
+.chat-panel,
+.admin-panel {
   background: #ffffff;
   border: 1px solid #d9e0da;
   border-radius: 8px;
+}
+
+.side-panel-stack {
+  align-content: start;
+  display: grid;
+  gap: 18px;
 }
 
 .settings-panel {
@@ -137,6 +144,12 @@ textarea {
   width: 100%;
 }
 
+.full-width-button--compact {
+  min-height: 38px;
+  padding: 8px 12px;
+  width: auto;
+}
+
 .full-width-button--secondary {
   background: #ffffff;
   color: #23765a;
@@ -179,6 +192,11 @@ textarea {
 }
 
 .backend-status--checking {
+  border-color: #dbc8a7;
+  background: #fff9ed;
+}
+
+.backend-status--loading {
   border-color: #dbc8a7;
   background: #fff9ed;
 }
@@ -659,6 +677,164 @@ textarea {
   gap: 8px;
   margin: 0;
   padding-left: 20px;
+}
+
+.admin-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.admin-panel__header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.admin-panel__header h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.admin-empty-state {
+  background: #eef3f1;
+  border: 1px solid #dde7e2;
+  border-radius: 8px;
+  color: #52605a;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+}
+
+.admin-empty-state strong,
+.admin-empty-state span {
+  margin: 0;
+}
+
+.admin-empty-state span {
+  color: #6d7872;
+  font-size: 0.88rem;
+}
+
+.admin-flag-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-flag-item {
+  border: 1px solid #e3e8e4;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.admin-flag-item__meta {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-flag-item__meta strong,
+.admin-flag-item__meta span {
+  overflow-wrap: anywhere;
+}
+
+.admin-flag-item__meta span {
+  color: #66736d;
+  font-size: 0.82rem;
+}
+
+.admin-flag-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.admin-flag-grid div {
+  background: #f7f9f7;
+  border: 1px solid #e3e8e4;
+  border-radius: 8px;
+  padding: 9px;
+}
+
+.admin-flag-grid dt {
+  color: #5b6862;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+
+.admin-flag-grid dd {
+  font-size: 0.82rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.severity-pill {
+  border: 1px solid #cbd8d1;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  text-transform: capitalize;
+}
+
+.severity-pill--low {
+  background: #edf8f2;
+  border-color: #b8d3c6;
+  color: #23765a;
+}
+
+.severity-pill--medium {
+  background: #fff9ed;
+  border-color: #dbc8a7;
+  color: #6d5942;
+}
+
+.severity-pill--high,
+.severity-pill--critical {
+  background: #fff1ef;
+  border-color: #e5b4ad;
+  color: #a04436;
+}
+
+.admin-flag-excerpt {
+  color: #2f3b35;
+  font-size: 0.9rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-flag-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-flag-actions button {
+  background: #ffffff;
+  border: 1px solid #ccd6cf;
+  border-radius: 8px;
+  color: #23765a;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 7px;
+}
+
+.admin-flag-actions button:hover:not(:disabled) {
+  border-color: #23765a;
+  box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.08);
+}
+
+.admin-flag-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 p,
