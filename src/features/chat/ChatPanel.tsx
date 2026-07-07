@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import type { AttachmentResponse } from "../../api/httpClient";
+import type {
+  AttachmentResponse,
+  ModerationPolicyResponse,
+} from "../../api/httpClient";
+import { detectModerationRisk } from "../../moderation/detection";
 import type { ChatMessage, ConnectionState } from "../../types/chat";
 
 const EMOJI_OPTIONS = ["👍", "😊", "😂", "🔥", "🎉", "🙏", "❤️", "✅"];
@@ -45,6 +49,7 @@ type ChatPanelProps = {
   isComposerDisabled: boolean;
   composerNotice: string | null;
   moderationWarning: string | null;
+  moderationPolicies: ModerationPolicyResponse[];
   isOtherUserTyping: boolean;
   onMessageDraftChange: (message: string) => void;
   onSelectedFileChange: (file: File | null) => void;
@@ -71,6 +76,7 @@ export function ChatPanel({
   isComposerDisabled,
   composerNotice,
   moderationWarning,
+  moderationPolicies,
   isOtherUserTyping,
   onMessageDraftChange,
   onSelectedFileChange,
@@ -224,6 +230,9 @@ export function ChatPanel({
           const message = item.message;
           const isOwnMessage = message.senderId === readyUserId;
           const senderLabel = isOwnMessage ? "You" : message.senderId;
+          const messageModerationDetection = message.body
+            ? detectModerationRisk(message.body, moderationPolicies)
+            : null;
 
           return (
             <article
@@ -240,8 +249,15 @@ export function ChatPanel({
               <div
                 className={`message-bubble ${
                   isOwnMessage ? "message-bubble--own" : "message-bubble--other"
+                } ${
+                  messageModerationDetection ? "message-bubble--flagged" : ""
                 }`}
               >
+                {messageModerationDetection ? (
+                  <span className="message-flag-label">
+                    Flagged: {messageModerationDetection.label}
+                  </span>
+                ) : null}
                 {message.body ? <p>{message.body}</p> : null}
                 {message.attachmentId ? (
                   <a
