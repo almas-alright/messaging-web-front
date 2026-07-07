@@ -7,6 +7,7 @@ export type ServerEvent =
   | ConversationJoinedEvent
   | ConversationMessagesEvent
   | MessageCreatedEvent
+  | TypingEvent
   | ErrorEvent
   | UnknownServerEvent;
 
@@ -37,7 +38,12 @@ export type MessageCreatedEvent = {
   sender_id: string;
   body: string;
   attachment_id?: string;
-  created_at: string;
+  created_at?: string;
+};
+
+export type TypingEvent = {
+  type: "typing.start" | "typing.stop";
+  conversation_id: string;
 };
 
 export type ErrorEvent = {

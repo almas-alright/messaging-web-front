@@ -268,6 +268,23 @@ textarea {
   width: 30px;
 }
 
+.day-separator {
+  color: #66736d;
+  display: flex;
+  justify-content: center;
+  margin: 4px 0;
+}
+
+.day-separator span {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid #dce5e0;
+  border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(22, 32, 28, 0.05);
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 5px 10px;
+}
+
 .message-bubble {
   box-shadow: 0 8px 18px rgba(22, 32, 28, 0.06);
   line-height: 1.45;
@@ -323,6 +340,11 @@ textarea {
   justify-content: space-between;
   margin-top: 6px;
   min-width: 132px;
+}
+
+.message-bubble time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .message-bubble--other {
@@ -542,9 +564,28 @@ textarea {
   box-shadow: 0 0 0 3px rgba(35, 118, 90, 0.12);
 }
 
+.composer-input-stack textarea.composer-textarea--risky {
+  border-color: #c5493c;
+  box-shadow: 0 0 0 3px rgba(197, 73, 60, 0.12);
+}
+
+.typing-indicator {
+  animation: typing-pen-bounce 0.9s ease-in-out infinite;
+  display: inline-flex;
+  font-size: 1rem;
+  line-height: 1;
+  width: max-content;
+}
+
 .composer-notice {
   color: #66736d;
   font-size: 0.78rem;
+}
+
+.composer-warning {
+  color: #b43d32;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .composer-send-button {
@@ -701,5 +742,18 @@ li {
 
   100% {
     transform: translateX(240%);
+  }
+}
+
+@keyframes typing-pen-bounce {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translateY(0) rotate(-6deg);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-2px) rotate(6deg);
   }
 }

@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createHttpClient,
   type AttachmentResponse,
   type CurrentUserResponse,
+  type ModerationPolicyListResponse,
 } from "./api/httpClient";
 import {
   clearStoredJwt,
@@ -15,12 +16,25 @@ import type { AppConfig } from "./config/env";
 import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
 import {
+  detectModerationRisk,
+  type ModerationDetection,
+} from "./moderation/detection";
+import {
+  loadCachedModerationPolicies,
+  saveCachedModerationPolicies,
+  type CachedModerationPolicies,
+} from "./moderation/policyCache";
+import {
   createMessagingWebSocket,
   type MessageCreatedEvent,
-  type ServerEvent,
   type MessagingWebSocket,
+  type ServerEvent,
 } from "./realtime/webSocketClient";
 import type { ChatMessage, ConnectionState } from "./types/chat";
+
+const TYPING_IDLE_TIMEOUT_MS = 1500;
+const TYPING_INDICATOR_TIMEOUT_MS = 3000;
+const MODERATION_FLAG_IDLE_TIMEOUT_MS = 800;
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -44,6 +58,16 @@ type UploadStatus = {
 
 export function App() {
   const webSocketRef = useRef<MessagingWebSocket | null>(null);
+  const joinedConversationRef = useRef<{
+    conversationId: string;
+    userId: string;
+  } | null>(null);
+  const typingStopTimerRef = useRef<number | null>(null);
+  const typingIndicatorTimerRef = useRef<number | null>(null);
+  const moderationFlagTimerRef = useRef<number | null>(null);
+  const isTypingRef = useRef(false);
+  const draftClientMessageIdRef = useRef<string | null>(null);
+  const submittedModerationFlagKeysRef = useRef<Set<string>>(new Set());
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
   const [jwtToken, setJwtToken] = useState(() => loadStoredJwt());
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
@@ -80,6 +104,85 @@ export function App() {
     label: "No file uploaded",
   });
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const [moderationPolicyCache, setModerationPolicyCache] =
+    useState<CachedModerationPolicies | null>(() =>
+      loadCachedModerationPolicies(),
+    );
+  const moderationDetection = useMemo(
+    () =>
+      detectModerationRisk(
+        messageDraft,
+        moderationPolicyCache?.policies ?? [],
+      ),
+    [messageDraft, moderationPolicyCache],
+  );
+
+  useEffect(() => {
+    joinedConversationRef.current = joinedConversation;
+  }, [joinedConversation]);
+
+  useEffect(() => {
+    if (!currentUser || !jwtToken.trim()) {
+      return;
+    }
+
+    void refreshModerationPolicies();
+  }, [config.apiBaseUrl, currentUser, jwtToken]);
+
+  useEffect(() => {
+    clearModerationFlagTimer();
+
+    const activeConversation = joinedConversation;
+    const draft = messageDraft.trim();
+    if (
+      !moderationDetection ||
+      !activeConversation ||
+      !draft ||
+      !jwtToken.trim()
+    ) {
+      return;
+    }
+
+    moderationFlagTimerRef.current = window.setTimeout(() => {
+      const clientMessageId = ensureDraftClientMessageId();
+      const dedupeKey = buildModerationFlagDedupeKey(
+        activeConversation.conversationId,
+        clientMessageId,
+        moderationDetection,
+      );
+
+      if (submittedModerationFlagKeysRef.current.has(dedupeKey)) {
+        return;
+      }
+
+      submittedModerationFlagKeysRef.current.add(dedupeKey);
+      void createHttpClient(config)
+        .createModerationFlag(jwtToken, {
+          conversation_id: activeConversation.conversationId,
+          client_message_id: clientMessageId,
+          policy_id: moderationDetection.policyKey,
+          matched_type: moderationDetection.matchedType,
+          matched_text: moderationDetection.matchedText,
+          message_excerpt: buildModerationMessageExcerpt(
+            draft,
+            moderationDetection.matchedText,
+          ),
+          detected_at: new Date().toISOString(),
+        })
+        .catch(() => {
+          // Keep the local warning responsive even when flag submission fails.
+        });
+    }, MODERATION_FLAG_IDLE_TIMEOUT_MS);
+  }, [config, joinedConversation, jwtToken, messageDraft, moderationDetection]);
+
+  useEffect(() => {
+    return () => {
+      clearTypingStopTimer();
+      clearTypingIndicatorTimer();
+      clearModerationFlagTimer();
+    };
+  }, []);
 
   function handleConfigChange(nextConfig: AppConfig) {
     setConfig(nextConfig);
@@ -131,12 +234,34 @@ export function App() {
     }
   }
 
+  async function refreshModerationPolicies() {
+    try {
+      const response = await createHttpClient(config).getModerationPolicies(
+        jwtToken,
+      );
+      updateModerationPolicyCache(response);
+    } catch {
+      // Cached policies continue to support local detection while offline.
+    }
+  }
+
+  function updateModerationPolicyCache(response: ModerationPolicyListResponse) {
+    setModerationPolicyCache((currentCache) => {
+      if (currentCache?.version === response.version) {
+        return currentCache;
+      }
+
+      return saveCachedModerationPolicies(response);
+    });
+  }
+
   function handleWebSocketConnect() {
     setWebSocketStatus({ state: "connecting", label: "Connecting" });
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
     setComposerNotice(null);
+    resetTypingState();
     webSocketRef.current?.disconnect();
     const client = createMessagingWebSocket(config, jwtToken, {
       onOpen: () => setWebSocketStatus({ state: "connected", label: "Open" }),
@@ -155,12 +280,14 @@ export function App() {
   }
 
   function handleWebSocketDisconnect() {
+    sendTypingStop();
     webSocketRef.current?.disconnect();
     webSocketRef.current = null;
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
     setComposerNotice(null);
+    resetTypingState();
     setWebSocketStatus({ state: "idle", label: "Disconnected" });
   }
 
@@ -207,6 +334,14 @@ export function App() {
         appendMessageIfNew(currentMessages, messageFromServer(event)),
       );
       setComposerNotice(null);
+      return;
+    }
+    if (
+      (event.type === "typing.start" || event.type === "typing.stop") &&
+      "conversation_id" in event &&
+      typeof event.conversation_id === "string"
+    ) {
+      handleTypingEvent(event.type, event.conversation_id);
     }
   }
 
@@ -215,7 +350,7 @@ export function App() {
     conversation_id: string;
     sender_id: string;
     body: string;
-    created_at: string;
+    created_at?: string;
     attachment_id?: string;
   }): ChatMessage {
     return {
@@ -223,7 +358,7 @@ export function App() {
       conversationId: event.conversation_id,
       senderId: event.sender_id,
       body: event.body,
-      createdAt: event.created_at,
+      createdAt: event.created_at || new Date().toISOString(),
       attachmentId: event.attachment_id,
     };
   }
@@ -254,14 +389,17 @@ export function App() {
     }
 
     try {
+      sendTypingStop();
+      const clientMessageId = ensureDraftClientMessageId();
       webSocketRef.current?.send({
         type: "message.send",
         conversation_id: joinedConversation.conversationId,
-        client_message_id: createClientMessageId(),
+        client_message_id: clientMessageId,
         body: body || undefined,
         attachment_id: attachment?.id,
       });
       setMessageDraft("");
+      draftClientMessageIdRef.current = null;
       if (attachment) {
         setSelectedFile(null);
         setUploadedAttachment(null);
@@ -272,6 +410,131 @@ export function App() {
       setComposerNotice(
         error instanceof Error ? error.message : "Message send failed",
       );
+    }
+  }
+
+  function handleMessageDraftChange(nextMessage: string) {
+    setMessageDraft(nextMessage);
+
+    if (!nextMessage.trim()) {
+      draftClientMessageIdRef.current = null;
+      clearModerationFlagTimer();
+      sendTypingStop();
+      return;
+    }
+
+    ensureDraftClientMessageId();
+    sendTypingStart();
+    scheduleTypingStop();
+  }
+
+  function ensureDraftClientMessageId() {
+    if (!draftClientMessageIdRef.current) {
+      draftClientMessageIdRef.current = createClientMessageId();
+    }
+
+    return draftClientMessageIdRef.current;
+  }
+
+  function sendTypingStart() {
+    const activeConversation = joinedConversationRef.current;
+    const socket = webSocketRef.current;
+
+    if (!activeConversation || !socket || isTypingRef.current) {
+      return;
+    }
+
+    try {
+      socket.send({
+        type: "typing.start",
+        conversation_id: activeConversation.conversationId,
+      });
+      isTypingRef.current = true;
+    } catch {
+      clearTypingStopTimer();
+    }
+  }
+
+  function sendTypingStop() {
+    const activeConversation = joinedConversationRef.current;
+    const socket = webSocketRef.current;
+
+    clearTypingStopTimer();
+    if (!activeConversation || !socket || !isTypingRef.current) {
+      isTypingRef.current = false;
+      return;
+    }
+
+    try {
+      socket.send({
+        type: "typing.stop",
+        conversation_id: activeConversation.conversationId,
+      });
+    } catch {
+      // The socket may already be closing; the next joined session starts fresh.
+    } finally {
+      isTypingRef.current = false;
+    }
+  }
+
+  function scheduleTypingStop() {
+    clearTypingStopTimer();
+    typingStopTimerRef.current = window.setTimeout(() => {
+      sendTypingStop();
+    }, TYPING_IDLE_TIMEOUT_MS);
+  }
+
+  function handleTypingEvent(
+    eventType: "typing.start" | "typing.stop",
+    eventConversationId: string,
+  ) {
+    const activeConversation = joinedConversationRef.current;
+
+    if (
+      !activeConversation ||
+      activeConversation.conversationId !== eventConversationId
+    ) {
+      return;
+    }
+
+    if (eventType === "typing.stop") {
+      clearTypingIndicatorTimer();
+      setIsOtherUserTyping(false);
+      return;
+    }
+
+    setIsOtherUserTyping(true);
+    clearTypingIndicatorTimer();
+    typingIndicatorTimerRef.current = window.setTimeout(() => {
+      setIsOtherUserTyping(false);
+    }, TYPING_INDICATOR_TIMEOUT_MS);
+  }
+
+  function resetTypingState() {
+    clearTypingStopTimer();
+    clearTypingIndicatorTimer();
+    isTypingRef.current = false;
+    setIsOtherUserTyping(false);
+  }
+
+  function clearTypingStopTimer() {
+    if (typingStopTimerRef.current !== null) {
+      window.clearTimeout(typingStopTimerRef.current);
+      typingStopTimerRef.current = null;
+    }
+  }
+
+  function clearTypingIndicatorTimer() {
+    if (typingIndicatorTimerRef.current !== null) {
+      window.clearTimeout(typingIndicatorTimerRef.current);
+      typingIndicatorTimerRef.current = null;
+    }
+  }
+
+  function clearModerationFlagTimer() {
+    if (moderationFlagTimerRef.current !== null) {
+      window.clearTimeout(moderationFlagTimerRef.current);
+      moderationFlagTimerRef.current = null;
     }
   }
 
@@ -369,7 +632,13 @@ export function App() {
             webSocketStatus.state !== "connected" || !joinedConversation
           }
           composerNotice={composerNotice}
-          onMessageDraftChange={setMessageDraft}
+          moderationWarning={
+            moderationDetection
+              ? `Warning: this message may include restricted contact information (${moderationDetection.label}).`
+              : null
+          }
+          isOtherUserTyping={isOtherUserTyping}
+          onMessageDraftChange={handleMessageDraftChange}
           onSelectedFileChange={handleSelectedFileChange}
           onFileUpload={handleFileUpload}
           onMessageSend={handleMessageSend}
@@ -398,6 +667,40 @@ function appendMessageIfNew(
   return [...messages, nextMessage];
 }
 
+function buildModerationFlagDedupeKey(
+  conversationId: string,
+  clientMessageId: string,
+  detection: ModerationDetection,
+) {
+  return [
+    conversationId,
+    clientMessageId,
+    detection.policyKey,
+    detection.matchedType,
+    detection.matchedText.trim().toLocaleLowerCase(),
+  ].join("|");
+}
+
+function buildModerationMessageExcerpt(message: string, matchedText: string) {
+  const sanitizedMessage = matchedText.trim()
+    ? message.replace(new RegExp(escapeRegExp(matchedText), "gi"), "[redacted]")
+    : message;
+
+  return truncateText(sanitizedMessage.trim(), 160);
+}
+
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function isMessageCreatedEvent(event: ServerEvent): event is MessageCreatedEvent {
   return (
     event.type === "message.created" &&
@@ -409,7 +712,6 @@ function isMessageCreatedEvent(event: ServerEvent): event is MessageCreatedEvent
     typeof event.sender_id === "string" &&
     "body" in event &&
     typeof event.body === "string" &&
-    "created_at" in event &&
-    typeof event.created_at === "string"
+    (!("created_at" in event) || typeof event.created_at === "string")
   );
 }
