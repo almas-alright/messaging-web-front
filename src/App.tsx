@@ -4,6 +4,8 @@ import {
   type AdminModerationFlagStatus,
   createHttpClient,
   type AttachmentResponse,
+  type ConversationMessageResponse,
+  type ConversationMessagesResponse,
   type CurrentUserResponse,
   type ModerationPolicyListResponse,
 } from "./api/httpClient";
@@ -38,6 +40,7 @@ import type { ChatMessage, ConnectionState } from "./types/chat";
 const TYPING_IDLE_TIMEOUT_MS = 1500;
 const TYPING_INDICATOR_TIMEOUT_MS = 3000;
 const MODERATION_FLAG_IDLE_TIMEOUT_MS = 800;
+const MESSAGE_HISTORY_PAGE_SIZE = 30;
 
 type BackendStatus = {
   state: "idle" | "checking" | "ok" | "error";
@@ -57,6 +60,16 @@ type WebSocketStatus = {
 type UploadStatus = {
   state: "idle" | "uploading" | "uploaded" | "error";
   label: string;
+};
+
+type MessageHistoryStatus = {
+  state: "idle" | "loading" | "loadingOlder" | "ok" | "error";
+  label: string;
+};
+
+type MessageHistoryPagination = {
+  hasMore: boolean;
+  nextBefore: string | null;
 };
 
 type AdminFlagsStatus = {
@@ -100,6 +113,16 @@ export function App() {
     userId: string;
   } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageHistoryStatus, setMessageHistoryStatus] =
+    useState<MessageHistoryStatus>({
+      state: "idle",
+      label: "Not loaded",
+    });
+  const [messageHistoryPagination, setMessageHistoryPagination] =
+    useState<MessageHistoryPagination>({
+      hasMore: false,
+      nextBefore: null,
+    });
   const [messageDraft, setMessageDraft] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedAttachment, setUploadedAttachment] =
@@ -350,6 +373,7 @@ export function App() {
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
+    resetMessageHistoryState();
     setComposerNotice(null);
     resetTypingState();
     webSocketRef.current?.disconnect();
@@ -376,6 +400,7 @@ export function App() {
     setReadyUserId(null);
     setJoinedConversation(null);
     setMessages([]);
+    resetMessageHistoryState();
     setComposerNotice(null);
     resetTypingState();
     setWebSocketStatus({ state: "idle", label: "Disconnected" });
@@ -405,6 +430,8 @@ export function App() {
         conversationId: event.conversation_id,
         userId: event.user_id,
       });
+      setMessages([]);
+      resetMessageHistoryState();
       return;
     }
     if (
@@ -453,6 +480,17 @@ export function App() {
     };
   }
 
+  function messageFromHistoryItem(item: ConversationMessageResponse): ChatMessage {
+    return {
+      id: item.id,
+      conversationId: item.conversation_id,
+      senderId: item.sender_id,
+      body: item.body,
+      createdAt: item.created_at || new Date().toISOString(),
+      attachmentId: item.attachment_id,
+    };
+  }
+
   function handleConversationJoin() {
     webSocketRef.current?.send({
       type: "conversation.join",
@@ -460,14 +498,77 @@ export function App() {
     });
   }
 
-  function handleConversationHistory() {
-    if (!joinedConversation) {
+  async function handleConversationHistory() {
+    if (!joinedConversation || !jwtToken.trim()) {
       return;
     }
-    webSocketRef.current?.send({
-      type: "conversation.history",
-      conversation_id: joinedConversation.conversationId,
+
+    setMessageHistoryStatus({
+      state: "loading",
+      label: "Loading latest messages",
     });
+    setComposerNotice(null);
+    try {
+      const response = await createHttpClient(config).getConversationMessages(
+        jwtToken,
+        joinedConversation.conversationId,
+        { limit: MESSAGE_HISTORY_PAGE_SIZE },
+      );
+      setMessages(response.messages.map(messageFromHistoryItem));
+      updateMessageHistoryPagination(response);
+      setMessageHistoryStatus({
+        state: "ok",
+        label: `${response.messages.length} latest messages loaded`,
+      });
+    } catch (error) {
+      setMessageHistoryStatus({
+        state: "error",
+        label: error instanceof Error ? error.message : "History load failed",
+      });
+    }
+  }
+
+  async function handleOlderMessagesLoad() {
+    if (
+      !joinedConversation ||
+      !jwtToken.trim() ||
+      !messageHistoryPagination.hasMore ||
+      !messageHistoryPagination.nextBefore ||
+      messageHistoryStatus.state === "loading" ||
+      messageHistoryStatus.state === "loadingOlder"
+    ) {
+      return;
+    }
+
+    setMessageHistoryStatus({
+      state: "loadingOlder",
+      label: "Loading older messages",
+    });
+    try {
+      const response = await createHttpClient(config).getConversationMessages(
+        jwtToken,
+        joinedConversation.conversationId,
+        {
+          limit: MESSAGE_HISTORY_PAGE_SIZE,
+          before: messageHistoryPagination.nextBefore,
+        },
+      );
+      const olderMessages = response.messages.map(messageFromHistoryItem);
+      setMessages((currentMessages) =>
+        prependMessagesIfNew(currentMessages, olderMessages),
+      );
+      updateMessageHistoryPagination(response);
+      setMessageHistoryStatus({
+        state: "ok",
+        label: `${olderMessages.length} older messages loaded`,
+      });
+    } catch (error) {
+      setMessageHistoryStatus({
+        state: "error",
+        label:
+          error instanceof Error ? error.message : "Older messages load failed",
+      });
+    }
   }
 
   function handleMessageSend() {
@@ -679,6 +780,27 @@ export function App() {
     }
   }
 
+  function updateMessageHistoryPagination(response: ConversationMessagesResponse) {
+    setMessageHistoryPagination({
+      hasMore: response.pagination.has_more,
+      nextBefore:
+        response.pagination.next_before ||
+        response.pagination.next_cursor ||
+        null,
+    });
+  }
+
+  function resetMessageHistoryState() {
+    setMessageHistoryStatus({
+      state: "idle",
+      label: "Not loaded",
+    });
+    setMessageHistoryPagination({
+      hasMore: false,
+      nextBefore: null,
+    });
+  }
+
   return (
     <AppShell>
       <div className="demo-layout">
@@ -722,6 +844,8 @@ export function App() {
           conversationId={conversationId}
           joinedConversation={joinedConversation}
           messages={messages}
+          historyStatus={messageHistoryStatus}
+          hasOlderMessages={messageHistoryPagination.hasMore}
           attachmentMetadataById={attachmentMetadataById}
           attachmentBaseUrl={config.apiBaseUrl}
           messageDraft={messageDraft}
@@ -742,6 +866,7 @@ export function App() {
           onMessageDraftChange={handleMessageDraftChange}
           onSelectedFileChange={handleSelectedFileChange}
           onFileUpload={handleFileUpload}
+          onLoadOlderMessages={handleOlderMessagesLoad}
           onMessageSend={handleMessageSend}
         />
       </div>
@@ -766,6 +891,18 @@ function appendMessageIfNew(
   }
 
   return [...messages, nextMessage];
+}
+
+function prependMessagesIfNew(
+  messages: ChatMessage[],
+  olderMessages: ChatMessage[],
+) {
+  const existingIds = new Set(messages.map((message) => message.id));
+  const uniqueOlderMessages = olderMessages.filter(
+    (message) => !existingIds.has(message.id),
+  );
+
+  return [...uniqueOlderMessages, ...messages];
 }
 
 function buildModerationFlagDedupeKey(
