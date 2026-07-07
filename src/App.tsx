@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  type AdminModerationFlagResponse,
+  type AdminModerationFlagStatus,
   createHttpClient,
   type AttachmentResponse,
   type CurrentUserResponse,
@@ -11,6 +13,7 @@ import {
   saveStoredJwt,
 } from "./auth/demoAuthStorage";
 import { AppShell } from "./components/AppShell";
+import { AdminModerationPanel } from "./components/AdminModerationPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
 import { loadStoredConfig, saveStoredConfig } from "./config/storage";
@@ -53,6 +56,11 @@ type WebSocketStatus = {
 
 type UploadStatus = {
   state: "idle" | "uploading" | "uploaded" | "error";
+  label: string;
+};
+
+type AdminFlagsStatus = {
+  state: "idle" | "loading" | "ok" | "error";
   label: string;
 };
 
@@ -109,6 +117,16 @@ export function App() {
     useState<CachedModerationPolicies | null>(() =>
       loadCachedModerationPolicies(),
     );
+  const [adminModerationFlags, setAdminModerationFlags] = useState<
+    AdminModerationFlagResponse[]
+  >([]);
+  const [adminFlagsStatus, setAdminFlagsStatus] = useState<AdminFlagsStatus>({
+    state: "idle",
+    label: "Not loaded",
+  });
+  const [updatingAdminFlagId, setUpdatingAdminFlagId] = useState<string | null>(
+    null,
+  );
   const moderationDetection = useMemo(
     () =>
       detectModerationRisk(
@@ -124,10 +142,18 @@ export function App() {
 
   useEffect(() => {
     if (!currentUser || !jwtToken.trim()) {
+      setAdminModerationFlags([]);
+      setAdminFlagsStatus({ state: "idle", label: "Not loaded" });
       return;
     }
 
     void refreshModerationPolicies();
+    if (currentUser.role === "admin") {
+      void handleAdminFlagsRefresh();
+    } else {
+      setAdminModerationFlags([]);
+      setAdminFlagsStatus({ state: "idle", label: "Admin JWT required" });
+    }
   }, [config.apiBaseUrl, currentUser, jwtToken]);
 
   useEffect(() => {
@@ -242,6 +268,70 @@ export function App() {
       updateModerationPolicyCache(response);
     } catch {
       // Cached policies continue to support local detection while offline.
+    }
+  }
+
+  async function handleAdminFlagsRefresh() {
+    if (!jwtToken.trim()) {
+      return;
+    }
+
+    setAdminFlagsStatus({
+      state: "loading",
+      label: "Loading moderation flags",
+    });
+    try {
+      const flags = await createHttpClient(config).getAdminModerationFlags(
+        jwtToken,
+      );
+      setAdminModerationFlags(flags);
+      setAdminFlagsStatus({
+        state: "ok",
+        label: `${flags.length} flag${flags.length === 1 ? "" : "s"} loaded`,
+      });
+    } catch (error) {
+      setAdminFlagsStatus({
+        state: "error",
+        label:
+          error instanceof Error
+            ? error.message
+            : "Moderation flags load failed",
+      });
+    }
+  }
+
+  async function handleAdminFlagStatusUpdate(
+    flagId: string,
+    status: Exclude<AdminModerationFlagStatus, "open">,
+  ) {
+    if (!jwtToken.trim()) {
+      return;
+    }
+
+    setUpdatingAdminFlagId(flagId);
+    try {
+      const updatedFlag = await createHttpClient(config).updateAdminModerationFlag(
+        jwtToken,
+        flagId,
+        { status },
+      );
+      setAdminModerationFlags((currentFlags) =>
+        currentFlags.map((flag) =>
+          flag.id === updatedFlag.id ? updatedFlag : flag,
+        ),
+      );
+      setAdminFlagsStatus({
+        state: "ok",
+        label: `Flag ${updatedFlag.id} marked ${updatedFlag.status}`,
+      });
+    } catch (error) {
+      setAdminFlagsStatus({
+        state: "error",
+        label:
+          error instanceof Error ? error.message : "Flag status update failed",
+      });
+    } finally {
+      setUpdatingAdminFlagId(null);
     }
   }
 
@@ -592,29 +682,40 @@ export function App() {
   return (
     <AppShell>
       <div className="demo-layout">
-        <SettingsPanel
-          config={config}
-          backendStatus={backendStatus}
-          authStatus={authStatus}
-          webSocketStatus={webSocketStatus}
-          readyUserId={readyUserId}
-          joinedConversation={joinedConversation}
-          conversationId={conversationId}
-          jwtToken={jwtToken}
-          currentUser={currentUser}
-          onConfigChange={handleConfigChange}
-          onJwtTokenChange={handleJwtTokenChange}
-          onJwtClear={handleJwtClear}
-          onConversationIdChange={setConversationId}
-          onCheckCurrentUser={handleCurrentUserCheck}
-          onWebSocketConnect={handleWebSocketConnect}
-          onWebSocketReconnect={handleWebSocketReconnect}
-          onWebSocketDisconnect={handleWebSocketDisconnect}
-          onConversationJoin={handleConversationJoin}
-          onConversationHistory={handleConversationHistory}
-          onCheckHealth={handleHealthCheck}
-          onCheckReady={handleReadyCheck}
-        />
+        <div className="side-panel-stack">
+          <SettingsPanel
+            config={config}
+            backendStatus={backendStatus}
+            authStatus={authStatus}
+            webSocketStatus={webSocketStatus}
+            readyUserId={readyUserId}
+            joinedConversation={joinedConversation}
+            conversationId={conversationId}
+            jwtToken={jwtToken}
+            currentUser={currentUser}
+            onConfigChange={handleConfigChange}
+            onJwtTokenChange={handleJwtTokenChange}
+            onJwtClear={handleJwtClear}
+            onConversationIdChange={setConversationId}
+            onCheckCurrentUser={handleCurrentUserCheck}
+            onWebSocketConnect={handleWebSocketConnect}
+            onWebSocketReconnect={handleWebSocketReconnect}
+            onWebSocketDisconnect={handleWebSocketDisconnect}
+            onConversationJoin={handleConversationJoin}
+            onConversationHistory={handleConversationHistory}
+            onCheckHealth={handleHealthCheck}
+            onCheckReady={handleReadyCheck}
+          />
+          {currentUser?.role === "admin" ? (
+            <AdminModerationPanel
+              flags={adminModerationFlags}
+              status={adminFlagsStatus}
+              updatingFlagId={updatingAdminFlagId}
+              onRefresh={handleAdminFlagsRefresh}
+              onStatusUpdate={handleAdminFlagStatusUpdate}
+            />
+          ) : null}
+        </div>
         <ChatPanel
           connectionState={webSocketStatus}
           readyUserId={readyUserId}

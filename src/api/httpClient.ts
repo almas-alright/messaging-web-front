@@ -8,6 +8,14 @@ export type HttpClient = {
   getModerationPolicies: (
     jwtToken: string,
   ) => Promise<ModerationPolicyListResponse>;
+  getAdminModerationFlags: (
+    jwtToken: string,
+  ) => Promise<AdminModerationFlagResponse[]>;
+  updateAdminModerationFlag: (
+    jwtToken: string,
+    flagId: string,
+    update: AdminModerationFlagUpdateRequest,
+  ) => Promise<AdminModerationFlagResponse>;
   createModerationFlag: (
     jwtToken: string,
     flag: ModerationFlagCreateRequest,
@@ -83,6 +91,30 @@ export type ModerationFlagResponse = {
   created_at: string;
 };
 
+export type AdminModerationFlagStatus =
+  | "open"
+  | "reviewed"
+  | "ignored"
+  | "escalated";
+
+export type AdminModerationFlagResponse = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  policy_id?: string;
+  matched_type: string;
+  message_excerpt?: string;
+  severity: "low" | "medium" | "high" | "critical";
+  status: AdminModerationFlagStatus;
+  detected_by?: string;
+  detected_at?: string;
+  created_at: string;
+};
+
+export type AdminModerationFlagUpdateRequest = {
+  status: Exclude<AdminModerationFlagStatus, "open">;
+};
+
 export type AttachmentResponse = {
   id: string;
   conversation_id: string;
@@ -102,6 +134,13 @@ export function createHttpClient(config: AppConfig): HttpClient {
       getCurrentUser(config.apiBaseUrl, jwtToken),
     getModerationPolicies: (jwtToken: string) =>
       getModerationPolicies(config.apiBaseUrl, jwtToken),
+    getAdminModerationFlags: (jwtToken: string) =>
+      getAdminModerationFlags(config.apiBaseUrl, jwtToken),
+    updateAdminModerationFlag: (
+      jwtToken: string,
+      flagId: string,
+      update: AdminModerationFlagUpdateRequest,
+    ) => updateAdminModerationFlag(config.apiBaseUrl, jwtToken, flagId, update),
     createModerationFlag: (
       jwtToken: string,
       flag: ModerationFlagCreateRequest,
@@ -160,6 +199,43 @@ async function createModerationFlag(
     throw new Error(`/moderation/flags returned ${response.status}`);
   }
   return response.json() as Promise<ModerationFlagResponse>;
+}
+
+async function getAdminModerationFlags(apiBaseUrl: string, jwtToken: string) {
+  const response = await fetch(`${apiBaseUrl}/admin/moderation/flags`, {
+    headers: {
+      Authorization: `Bearer ${jwtToken.trim()}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`/admin/moderation/flags returned ${response.status}`);
+  }
+  return response.json() as Promise<AdminModerationFlagResponse[]>;
+}
+
+async function updateAdminModerationFlag(
+  apiBaseUrl: string,
+  jwtToken: string,
+  flagId: string,
+  update: AdminModerationFlagUpdateRequest,
+) {
+  const response = await fetch(
+    `${apiBaseUrl}/admin/moderation/flags/${encodeURIComponent(flagId)}`,
+    {
+      body: JSON.stringify(update),
+      headers: {
+        Authorization: `Bearer ${jwtToken.trim()}`,
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `/admin/moderation/flags/${flagId} returned ${response.status}`,
+    );
+  }
+  return response.json() as Promise<AdminModerationFlagResponse>;
 }
 
 async function uploadAttachment(
