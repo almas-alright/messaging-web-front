@@ -350,7 +350,7 @@ export function App() {
     conversation_id: string;
     sender_id: string;
     body: string;
-    created_at: string;
+    created_at?: string;
     attachment_id?: string;
   }): ChatMessage {
     return {
@@ -358,7 +358,7 @@ export function App() {
       conversationId: event.conversation_id,
       senderId: event.sender_id,
       body: event.body,
-      createdAt: event.created_at,
+      createdAt: event.created_at || new Date().toISOString(),
       attachmentId: event.attachment_id,
     };
   }
@@ -712,7 +712,6 @@ function isMessageCreatedEvent(event: ServerEvent): event is MessageCreatedEvent
     typeof event.sender_id === "string" &&
     "body" in event &&
     typeof event.body === "string" &&
-    "created_at" in event &&
-    typeof event.created_at === "string"
+    (!("created_at" in event) || typeof event.created_at === "string")
   );
 }

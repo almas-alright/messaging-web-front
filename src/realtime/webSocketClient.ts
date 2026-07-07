@@ -38,7 +38,7 @@ export type MessageCreatedEvent = {
   sender_id: string;
   body: string;
   attachment_id?: string;
-  created_at: string;
+  created_at?: string;
 };
 
 export type TypingEvent = {

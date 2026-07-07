@@ -4,6 +4,17 @@ import type { ChatMessage, ConnectionState } from "../../types/chat";
 
 const EMOJI_OPTIONS = ["👍", "😊", "😂", "🔥", "🎉", "🙏", "❤️", "✅"];
 
+type MessageTimelineItem =
+  | {
+      type: "day";
+      id: string;
+      label: string;
+    }
+  | {
+      type: "message";
+      message: ChatMessage;
+    };
+
 type ChatPanelProps = {
   connectionState: {
     state: ConnectionState;
@@ -59,6 +70,7 @@ export function ChatPanel({
   onMessageSend,
 }: ChatPanelProps) {
   const hasMessages = messages.length > 0;
+  const timelineItems = buildMessageTimeline(messages);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -134,7 +146,16 @@ export function ChatPanel({
             <span>Join a conversation, then load history to begin.</span>
           </article>
         ) : null}
-        {messages.map((message) => {
+        {timelineItems.map((item) => {
+          if (item.type === "day") {
+            return (
+              <div className="day-separator" key={item.id}>
+                <span>{item.label}</span>
+              </div>
+            );
+          }
+
+          const message = item.message;
           const isOwnMessage = message.senderId === readyUserId;
           const senderLabel = isOwnMessage ? "You" : message.senderId;
 
@@ -333,10 +354,87 @@ function formatMessageTime(value: string) {
     return "";
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   }).format(date);
+}
+
+function buildMessageTimeline(messages: ChatMessage[]): MessageTimelineItem[] {
+  const items: MessageTimelineItem[] = [];
+  let activeDayKey = "";
+
+  for (const message of messages) {
+    const timestamp = parseMessageTimestamp(message.createdAt);
+    const dayKey = formatDayKey(timestamp);
+
+    if (dayKey !== activeDayKey) {
+      activeDayKey = dayKey;
+      items.push({
+        type: "day",
+        id: `day-${dayKey}`,
+        label: formatDayLabel(timestamp),
+      });
+    }
+
+    items.push({
+      type: "message",
+      message,
+    });
+  }
+
+  return items;
+}
+
+function parseMessageTimestamp(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return new Date();
+  }
+
+  return date;
+}
+
+function formatDayKey(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatDayLabel(date: Date) {
+  const today = startOfLocalDay(new Date());
+  const messageDay = startOfLocalDay(date);
+  const dayDifference = Math.round(
+    (today.getTime() - messageDay.getTime()) / 86_400_000,
+  );
+
+  if (dayDifference === 0) {
+    return "Today";
+  }
+
+  if (dayDifference === 1) {
+    return "Yesterday";
+  }
+
+  if (dayDifference > 1 && dayDifference < 7) {
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+    }).format(date);
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 function getSenderInitial(senderId: string) {
