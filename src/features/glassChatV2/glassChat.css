@@ -1,7 +1,14 @@
 .glass-chat-page {
   background:
-    linear-gradient(135deg, rgba(229, 241, 235, 0.92), rgba(221, 232, 244, 0.9)),
-    linear-gradient(45deg, #f7faf8, #dfe9ef 48%, #ecf4ee);
+    linear-gradient(135deg, rgba(248, 252, 250, 0.94), rgba(224, 237, 243, 0.9)),
+    linear-gradient(45deg, rgba(218, 233, 225, 0.82), rgba(239, 246, 242, 0.92)),
+    repeating-linear-gradient(
+      135deg,
+      rgba(45, 84, 74, 0.035) 0,
+      rgba(45, 84, 74, 0.035) 1px,
+      transparent 1px,
+      transparent 28px
+    );
   color: #10231d;
   min-height: 100vh;
   padding: 20px;
@@ -14,12 +21,14 @@
 }
 
 .glass-chat-shell {
-  background: rgba(255, 255, 255, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 18px;
-  box-shadow: 0 30px 80px rgba(39, 61, 55, 0.18);
+  box-shadow:
+    0 32px 80px rgba(39, 61, 55, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
   display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 370px) minmax(0, 1fr);
   min-height: calc(100vh - 40px);
   overflow: hidden;
 }
@@ -135,13 +144,13 @@
 }
 
 .glass-sidebar {
-  background: rgba(243, 249, 246, 0.62);
+  background: rgba(243, 249, 246, 0.68);
   border-right: 1px solid rgba(255, 255, 255, 0.46);
   display: grid;
-  gap: 16px;
+  gap: 14px;
   grid-template-rows: auto auto minmax(0, 1fr);
   min-width: 0;
-  padding: 18px;
+  padding: 20px 18px;
 }
 
 .glass-sidebar__profile,
@@ -156,6 +165,8 @@
 
 .glass-sidebar__profile {
   gap: 12px;
+  min-width: 0;
+  padding: 2px 2px 6px;
 }
 
 .glass-sidebar__profile h1,
@@ -170,6 +181,9 @@
 .glass-conversation__header h2 {
   font-size: 1.18rem;
   line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .glass-sidebar__profile span,
@@ -245,6 +259,7 @@
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(0, 1fr) auto;
+  padding-top: 2px;
 }
 
 .glass-search span {
@@ -290,6 +305,14 @@
   opacity: 0.62;
 }
 
+.glass-contact-form__button:hover:not(:disabled),
+.glass-header-actions button:hover,
+.glass-demo-link:hover,
+.glass-composer__send:hover:not(:disabled) {
+  box-shadow: 0 10px 22px rgba(37, 95, 81, 0.14);
+  filter: brightness(1.02);
+}
+
 .glass-contact-status {
   border: 1px solid rgba(255, 255, 255, 0.52);
   border-radius: 8px;
@@ -315,15 +338,16 @@
   display: grid;
   gap: 10px;
   overflow: auto;
-  padding-right: 2px;
+  padding: 2px 2px 8px;
+  scrollbar-gutter: stable;
 }
 
 .glass-contact {
   appearance: none;
-  background: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.38);
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 10px;
-  box-shadow: 0 10px 28px rgba(37, 63, 57, 0.08);
+  box-shadow: 0 10px 26px rgba(37, 63, 57, 0.07);
   color: inherit;
   cursor: pointer;
   gap: 12px;
@@ -332,12 +356,27 @@
   min-width: 0;
   padding: 10px;
   text-align: left;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
   width: 100%;
 }
 
+.glass-contact:hover {
+  background: rgba(255, 255, 255, 0.54);
+  border-color: rgba(93, 177, 140, 0.34);
+  box-shadow: 0 14px 30px rgba(37, 63, 57, 0.1);
+  transform: translateY(-1px);
+}
+
 .glass-contact--active {
-  background: rgba(225, 247, 237, 0.72);
+  background: rgba(216, 245, 232, 0.8);
   border-color: rgba(93, 177, 140, 0.46);
+  box-shadow:
+    0 16px 34px rgba(37, 95, 81, 0.12),
+    inset 3px 0 0 rgba(48, 119, 102, 0.66);
 }
 
 .glass-contact__body {
@@ -380,13 +419,14 @@
 }
 
 .glass-conversation__header {
-  background: rgba(248, 252, 250, 0.56);
+  align-items: center;
+  background: rgba(248, 252, 250, 0.62);
   border-bottom: 1px solid rgba(255, 255, 255, 0.5);
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  min-height: 82px;
-  padding: 16px 20px;
+  min-height: 86px;
+  padding: 16px 22px;
 }
 
 .glass-conversation__identity {
@@ -427,7 +467,7 @@
 }
 
 .glass-empty-contact {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.34);
   border: 1px dashed rgba(48, 119, 102, 0.32);
   border-radius: 10px;
   color: rgba(16, 35, 29, 0.62);
@@ -437,7 +477,7 @@
 }
 
 .glass-conversation-empty {
-  background: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.48);
   border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 12px;
   box-shadow: 0 16px 32px rgba(37, 63, 57, 0.1);
@@ -449,6 +489,15 @@
   max-width: min(420px, 100%);
   padding: 18px;
   text-align: center;
+}
+
+.glass-conversation-empty--error {
+  background: rgba(255, 238, 235, 0.72);
+  border-color: rgba(216, 93, 81, 0.28);
+}
+
+.glass-conversation-empty--resolving {
+  background: rgba(225, 247, 237, 0.54);
 }
 
 .glass-conversation-empty strong {
@@ -474,11 +523,12 @@
       rgba(51, 87, 77, 0.05) 1px,
       transparent 1px,
       transparent 24px
-    );
+  );
   display: grid;
-  gap: 12px;
+  gap: 11px;
   overflow: auto;
-  padding: 22px;
+  padding: 24px;
+  scrollbar-gutter: stable;
 }
 
 .glass-day-chip {
@@ -507,11 +557,11 @@
 
 .glass-message {
   border: 1px solid rgba(255, 255, 255, 0.58);
-  border-radius: 14px;
-  box-shadow: 0 18px 38px rgba(24, 54, 47, 0.12);
+  border-radius: 15px;
+  box-shadow: 0 15px 32px rgba(24, 54, 47, 0.11);
   line-height: 1.45;
   max-width: min(560px, 78%);
-  padding: 12px 14px 9px;
+  padding: 11px 13px 8px;
 }
 
 .glass-message--normal {
@@ -531,11 +581,14 @@
 }
 
 .glass-message footer {
+  align-items: center;
   color: rgba(16, 35, 29, 0.58);
+  display: flex;
   font-size: 0.74rem;
   gap: 8px;
   justify-content: flex-end;
   margin-top: 7px;
+  min-height: 18px;
 }
 
 .glass-receipt {
@@ -552,22 +605,30 @@
 }
 
 .glass-message--latest {
-  animation: glass-message-drift 5s ease-in-out infinite;
+  animation: glass-message-drift 7s ease-in-out infinite;
   box-shadow: 0 22px 46px rgba(125, 62, 56, 0.16);
 }
 
 .glass-composer {
-  background: rgba(248, 252, 250, 0.62);
+  background: rgba(248, 252, 250, 0.68);
   border-top: 1px solid rgba(255, 255, 255, 0.52);
   gap: 10px;
   min-height: 76px;
-  padding: 14px 18px;
+  padding: 14px 20px;
 }
 
 .glass-composer input {
   flex: 1 1 auto;
   min-height: 46px;
   padding: 0 14px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.glass-composer input:focus {
+  border-color: rgba(48, 119, 102, 0.46);
+  box-shadow: 0 0 0 3px rgba(48, 119, 102, 0.1);
 }
 
 .glass-composer__tool,
@@ -596,12 +657,12 @@
 }
 
 .glass-socket-status {
-  background: rgba(248, 252, 250, 0.62);
+  background: rgba(248, 252, 250, 0.68);
   border-top: 1px solid rgba(255, 255, 255, 0.42);
   color: rgba(16, 35, 29, 0.62);
   font-size: 0.78rem;
   margin: 0;
-  padding: 8px 18px 12px;
+  padding: 8px 20px 12px;
 }
 
 .glass-socket-status--joined {
@@ -619,7 +680,7 @@
   }
 
   50% {
-    transform: translateY(-1px) rotate(-0.2deg);
+    transform: translateY(-0.75px) rotate(-0.12deg);
   }
 }
 
@@ -643,7 +704,7 @@
   .glass-sidebar {
     border-bottom: 1px solid rgba(255, 255, 255, 0.46);
     border-right: 0;
-    max-height: 310px;
+    max-height: 320px;
   }
 
   .glass-contact-list {
@@ -660,6 +721,10 @@
 
   .glass-message {
     max-width: 88%;
+  }
+
+  .glass-message-stage {
+    padding: 18px;
   }
 
   .glass-demo-link {
