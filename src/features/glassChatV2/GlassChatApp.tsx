@@ -1,49 +1,33 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   createBackendV2Client,
   type ContactConversationResponse,
   type ContactResponse,
   type DemoUserResponse,
 } from "../../api/v2Client";
+import { loadStoredJwt } from "../../auth/demoAuthStorage";
 import { loadStoredConfig } from "../../config/storage";
+import {
+  createMessagingWebSocket,
+  type MessageCreatedEvent,
+  type MessagingWebSocket,
+  type ServerEvent,
+} from "../../realtime/webSocketClient";
 import "./glassChat.css";
 
 const activeUserStorageKey = "messaging-web-front:glass-chat-v2:active-user";
 
-const previewMessages = [
-  {
-    id: "msg-1",
-    direction: "other",
-    body: "Morning. Can you send the updated delivery window?",
-    time: "10:24",
-    tone: "normal",
-  },
-  {
-    id: "msg-2",
-    direction: "own",
-    body: "Yes. I am pulling the latest details now.",
-    time: "10:25",
-    tone: "normal",
-    receipt: "delivered",
-  },
-  {
-    id: "msg-3",
-    direction: "other",
-    body: "This message is a visual warning placeholder for V2 moderation states.",
-    time: "10:26",
-    tone: "warning",
-  },
-  {
-    id: "msg-4",
-    direction: "own",
-    body: "Flagged or blocked backend states will use this alert treatment.",
-    time: "10:27",
-    tone: "alert",
-    receipt: "seen",
-  },
-];
+type GlassMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+  policyStatus: "clean" | "flagged" | "blocked";
+};
 
 export function GlassChatApp() {
+  const webSocketRef = useRef<MessagingWebSocket | null>(null);
   const [activeUser, setActiveUser] = useState<DemoUserResponse | null>(() =>
     loadActiveUser(),
   );
@@ -56,6 +40,15 @@ export function GlassChatApp() {
   );
   const [activeConversation, setActiveConversation] =
     useState<ContactConversationResponse | null>(null);
+  const [messages, setMessages] = useState<GlassMessage[]>([]);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [socketStatus, setSocketStatus] = useState<{
+    state: "idle" | "connecting" | "joined" | "error";
+    label: string;
+  }>({
+    state: "idle",
+    label: "Select a contact to connect.",
+  });
   const [conversationStatus, setConversationStatus] = useState<{
     state: "idle" | "resolving" | "open" | "error";
     label: string;
@@ -86,10 +79,20 @@ export function GlassChatApp() {
     contacts.find((contact) => contact.id === selectedContactId) ?? null;
 
   useEffect(() => {
+    return () => {
+      webSocketRef.current?.disconnect();
+      webSocketRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!activeUser) {
       setContacts([]);
       setSelectedContactId(null);
       setActiveConversation(null);
+      setMessages([]);
+      setMessageDraft("");
+      disconnectGlassSocket();
       setConversationStatus({ state: "idle", label: "" });
       setContactStatus({ state: "idle", label: "" });
       return;
@@ -97,6 +100,19 @@ export function GlassChatApp() {
 
     void refreshContacts(activeUser.id);
   }, [activeUser?.id]);
+
+  useEffect(() => {
+    if (!activeUser || !activeConversation) {
+      disconnectGlassSocket();
+      setSocketStatus({
+        state: "idle",
+        label: activeUser ? "Select a contact to connect." : "",
+      });
+      return;
+    }
+
+    connectGlassSocket(activeConversation.conversation_id);
+  }, [activeConversation?.conversation_id, activeUser?.id]);
 
   async function handleIdentitySubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,6 +132,8 @@ export function GlassChatApp() {
       setContacts([]);
       setSelectedContactId(null);
       setActiveConversation(null);
+      setMessages([]);
+      setMessageDraft("");
       setConversationStatus({ state: "idle", label: "" });
       setContactStatus({ state: "idle", label: "" });
       setEmail("");
@@ -136,6 +154,9 @@ export function GlassChatApp() {
     setContacts([]);
     setSelectedContactId(null);
     setActiveConversation(null);
+    setMessages([]);
+    setMessageDraft("");
+    disconnectGlassSocket();
     setConversationStatus({ state: "idle", label: "" });
     setContactDraft("");
     setContactStatus({ state: "idle", label: "" });
@@ -204,6 +225,9 @@ export function GlassChatApp() {
 
     setSelectedContactId(contact.id);
     setActiveConversation(null);
+    setMessages([]);
+    setMessageDraft("");
+    disconnectGlassSocket();
     setConversationStatus({
       state: "resolving",
       label: `Opening chat with ${contact.display_name}...`,
@@ -223,6 +247,106 @@ export function GlassChatApp() {
       setConversationStatus({
         state: "error",
         label: friendlyConversationError(error),
+      });
+    }
+  }
+
+  function connectGlassSocket(conversationId: string) {
+    const jwtToken = loadStoredJwt().trim();
+    if (!jwtToken) {
+      setSocketStatus({
+        state: "error",
+        label: "Local demo JWT is missing. Use the current demo once to store a token.",
+      });
+      return;
+    }
+
+    disconnectGlassSocket();
+    setSocketStatus({ state: "connecting", label: "Connecting to chat..." });
+
+    const client = createMessagingWebSocket(loadStoredConfig(), jwtToken, {
+      onOpen: () => {
+        setSocketStatus({ state: "connecting", label: "Joining conversation..." });
+      },
+      onMessage: (event) => handleGlassSocketMessage(event, conversationId),
+      onClose: () => {
+        setSocketStatus({ state: "idle", label: "Chat disconnected." });
+      },
+      onError: () => {
+        setSocketStatus({
+          state: "error",
+          label: "Could not connect to chat. Check the backend and demo token.",
+        });
+      },
+    });
+
+    webSocketRef.current = client;
+    client.connect();
+  }
+
+  function disconnectGlassSocket() {
+    webSocketRef.current?.disconnect();
+    webSocketRef.current = null;
+  }
+
+  function handleGlassSocketMessage(event: ServerEvent, conversationId: string) {
+    if (event.type === "connection.ready") {
+      try {
+        webSocketRef.current?.send({
+          type: "conversation.join",
+          conversation_id: conversationId,
+        });
+      } catch (error) {
+        setSocketStatus({
+          state: "error",
+          label: error instanceof Error ? error.message : "Conversation join failed.",
+        });
+      }
+      return;
+    }
+
+    if (
+      event.type === "conversation.joined" &&
+      event.conversation_id === conversationId
+    ) {
+      setSocketStatus({ state: "joined", label: "Live chat connected." });
+      return;
+    }
+
+    if (isMessageCreatedEvent(event) && event.conversation_id === conversationId) {
+      setMessages((current) => appendMessageIfNew(current, messageFromEvent(event)));
+      setSocketStatus({ state: "joined", label: "Live chat connected." });
+      return;
+    }
+
+    if (event.type === "error") {
+      setSocketStatus({
+        state: "error",
+        label: typeof event.error === "string" ? event.error : "Chat error.",
+      });
+    }
+  }
+
+  function handleMessageSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const body = messageDraft.trim();
+    if (!activeConversation || !body) {
+      return;
+    }
+
+    try {
+      webSocketRef.current?.send({
+        type: "message.send",
+        conversation_id: activeConversation.conversation_id,
+        client_message_id: createClientMessageId(),
+        body,
+      });
+      setMessageDraft("");
+      setSocketStatus({ state: "joined", label: "Message sent." });
+    } catch (error) {
+      setSocketStatus({
+        state: "error",
+        label: error instanceof Error ? error.message : "Message send failed.",
       });
     }
   }
@@ -442,22 +566,38 @@ export function GlassChatApp() {
                 <span>{conversationStatus.label}</span>
               </article>
             ) : null}
+            {selectedContact && activeConversation && messages.length === 0 ? (
+              <article className="glass-conversation-empty">
+                <strong>No messages yet</strong>
+                <span>Send the first message in this direct conversation.</span>
+              </article>
+            ) : null}
             {selectedContact && activeConversation
-              ? previewMessages.map((message) => (
+              ? messages.map((message, index) => (
                   <article
-                    className={`glass-message-row glass-message-row--${message.direction}`}
+                    className={`glass-message-row ${
+                      message.senderId === activeUser.id
+                        ? "glass-message-row--own"
+                        : "glass-message-row--other"
+                    }`}
                     key={message.id}
                   >
                     <div
-                      className={`glass-message glass-message--${message.tone} ${
-                        message.id === "msg-4" ? "glass-message--latest" : ""
+                      className={`glass-message glass-message--${messageTone(
+                        message,
+                      )} ${
+                        index === messages.length - 1
+                          ? "glass-message--latest"
+                          : ""
                       }`}
                     >
                       <p>{message.body}</p>
                       <footer>
-                        <time>{message.time}</time>
-                        {message.receipt ? (
-                          <span className="glass-receipt">{message.receipt}</span>
+                        <time>{formatMessageTime(message.createdAt)}</time>
+                        {message.policyStatus !== "clean" ? (
+                          <span className="glass-receipt">
+                            {message.policyStatus}
+                          </span>
                         ) : null}
                       </footer>
                     </div>
@@ -466,13 +606,18 @@ export function GlassChatApp() {
               : null}
           </div>
 
-          <form className="glass-composer" aria-label="Message composer">
+          <form
+            className="glass-composer"
+            aria-label="Message composer"
+            onSubmit={handleMessageSubmit}
+          >
             <span className="glass-composer__tool" aria-hidden="true">
               +
             </span>
             <input
               aria-label="Message preview input"
-              disabled
+              disabled={!activeConversation || socketStatus.state !== "joined"}
+              onChange={(event) => setMessageDraft(event.target.value)}
               placeholder={
                 activeConversation && selectedContact
                   ? `Message ${selectedContact.display_name}`
@@ -481,11 +626,26 @@ export function GlassChatApp() {
                     : "Select a contact first"
               }
               type="text"
+              value={messageDraft}
             />
-            <span className="glass-composer__send" aria-hidden="true">
+            <button
+              className="glass-composer__send"
+              disabled={
+                !activeConversation ||
+                socketStatus.state !== "joined" ||
+                !messageDraft.trim()
+              }
+              type="submit"
+            >
               Go
-            </span>
+            </button>
           </form>
+          <p
+            className={`glass-socket-status glass-socket-status--${socketStatus.state}`}
+            role={socketStatus.state === "error" ? "alert" : "status"}
+          >
+            {socketStatus.label}
+          </p>
         </section>
       </section>
     </main>
@@ -537,6 +697,63 @@ function uniqueContacts(contacts: ContactResponse[]) {
     result.push(contact);
   }
   return result;
+}
+
+function appendMessageIfNew(messages: GlassMessage[], nextMessage: GlassMessage) {
+  if (messages.some((message) => message.id === nextMessage.id)) {
+    return messages;
+  }
+  return [...messages, nextMessage];
+}
+
+function messageFromEvent(event: MessageCreatedEvent): GlassMessage {
+  return {
+    id: event.message_id,
+    conversationId: event.conversation_id,
+    senderId: event.sender_id,
+    body: event.body,
+    createdAt: event.created_at || new Date().toISOString(),
+    policyStatus: event.policy_status,
+  };
+}
+
+function messageTone(message: GlassMessage) {
+  if (message.policyStatus === "flagged" || message.policyStatus === "blocked") {
+    return "alert";
+  }
+  return "normal";
+}
+
+function formatMessageTime(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  return parsed.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function createClientMessageId() {
+  if ("crypto" in window && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+  return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function isMessageCreatedEvent(event: ServerEvent): event is MessageCreatedEvent {
+  return (
+    event.type === "message.created" &&
+    "message_id" in event &&
+    typeof event.message_id === "string" &&
+    "conversation_id" in event &&
+    typeof event.conversation_id === "string" &&
+    "sender_id" in event &&
+    typeof event.sender_id === "string" &&
+    "body" in event &&
+    typeof event.body === "string"
+  );
 }
 
 function friendlyIdentityError(error: unknown) {
