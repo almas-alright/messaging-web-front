@@ -236,6 +236,13 @@
   gap: 8px;
 }
 
+.glass-contact-form {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .glass-search span {
   color: rgba(16, 35, 29, 0.62);
   font-size: 0.76rem;
@@ -263,6 +270,43 @@
   color: rgba(16, 35, 29, 0.46);
 }
 
+.glass-contact-form__button {
+  background: rgba(48, 119, 102, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+.glass-contact-form__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.glass-contact-status {
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  margin: -6px 0 0;
+  padding: 9px 10px;
+}
+
+.glass-contact-status--loading,
+.glass-contact-status--adding,
+.glass-contact-status--ok {
+  background: rgba(225, 247, 237, 0.54);
+  color: #245f51;
+}
+
+.glass-contact-status--error {
+  background: rgba(255, 238, 235, 0.72);
+  color: #8f3027;
+}
+
 .glass-contact-list {
   display: grid;
   gap: 10px;
@@ -271,14 +315,20 @@
 }
 
 .glass-contact {
+  appearance: none;
   background: rgba(255, 255, 255, 0.34);
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 10px;
   box-shadow: 0 10px 28px rgba(37, 63, 57, 0.08);
+  color: inherit;
+  cursor: pointer;
   gap: 12px;
+  font: inherit;
   min-height: 72px;
   min-width: 0;
   padding: 10px;
+  text-align: left;
+  width: 100%;
 }
 
 .glass-contact--active {
@@ -380,6 +430,25 @@
   display: grid;
   gap: 4px;
   padding: 12px;
+}
+
+.glass-conversation-empty {
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 12px;
+  box-shadow: 0 16px 32px rgba(37, 63, 57, 0.1);
+  color: rgba(16, 35, 29, 0.62);
+  display: grid;
+  gap: 6px;
+  justify-self: center;
+  line-height: 1.42;
+  max-width: min(420px, 100%);
+  padding: 18px;
+  text-align: center;
+}
+
+.glass-conversation-empty strong {
+  color: #10231d;
 }
 
 .glass-empty-contact strong {

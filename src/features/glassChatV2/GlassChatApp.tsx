@@ -1,39 +1,13 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createBackendV2Client,
+  type ContactResponse,
   type DemoUserResponse,
 } from "../../api/v2Client";
 import { loadStoredConfig } from "../../config/storage";
 import "./glassChat.css";
 
 const activeUserStorageKey = "messaging-web-front:glass-chat-v2:active-user";
-
-const previewContacts = [
-  {
-    id: "mira",
-    name: "Mira Chen",
-    username: "@mira",
-    status: "online",
-    lastMessage: "The new samples look good.",
-    tone: "normal",
-  },
-  {
-    id: "akash",
-    name: "Akash Rahman",
-    username: "@akash",
-    status: "offline",
-    lastMessage: "I will check the order notes.",
-    tone: "normal",
-  },
-  {
-    id: "nora",
-    name: "Nora Silva",
-    username: "@nora",
-    status: "online",
-    lastMessage: "Potential policy warning preview.",
-    tone: "warning",
-  },
-];
 
 const previewMessages = [
   {
@@ -75,6 +49,18 @@ export function GlassChatApp() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [contacts, setContacts] = useState<ContactResponse[]>([]);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(
+    null,
+  );
+  const [contactDraft, setContactDraft] = useState("");
+  const [contactStatus, setContactStatus] = useState<{
+    state: "idle" | "loading" | "adding" | "ok" | "error";
+    label: string;
+  }>({
+    state: "idle",
+    label: "",
+  });
   const [identityStatus, setIdentityStatus] = useState<{
     state: "idle" | "creating" | "error";
     label: string;
@@ -86,6 +72,19 @@ export function GlassChatApp() {
     () => createBackendV2Client(loadStoredConfig()),
     [],
   );
+  const selectedContact =
+    contacts.find((contact) => contact.id === selectedContactId) ?? null;
+
+  useEffect(() => {
+    if (!activeUser) {
+      setContacts([]);
+      setSelectedContactId(null);
+      setContactStatus({ state: "idle", label: "" });
+      return;
+    }
+
+    void refreshContacts(activeUser.id);
+  }, [activeUser?.id]);
 
   async function handleIdentitySubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -102,6 +101,9 @@ export function GlassChatApp() {
       });
       saveActiveUser(created);
       setActiveUser(created);
+      setContacts([]);
+      setSelectedContactId(null);
+      setContactStatus({ state: "idle", label: "" });
       setEmail("");
       setUsername("");
       setDisplayName("");
@@ -117,7 +119,64 @@ export function GlassChatApp() {
   function handleIdentityReset() {
     clearActiveUser();
     setActiveUser(null);
+    setContacts([]);
+    setSelectedContactId(null);
+    setContactDraft("");
+    setContactStatus({ state: "idle", label: "" });
     setIdentityStatus({ state: "idle", label: "" });
+  }
+
+  async function refreshContacts(ownerUserId: string) {
+    setContactStatus({ state: "loading", label: "Loading contacts..." });
+    try {
+      const response = await v2Client.listContacts(ownerUserId);
+      setContacts(uniqueContacts(response.contacts));
+      setSelectedContactId((current) => {
+        if (
+          current &&
+          response.contacts.some((contact) => contact.id === current)
+        ) {
+          return current;
+        }
+        return response.contacts[0]?.id ?? null;
+      });
+      setContactStatus({
+        state: "ok",
+        label: response.contacts.length
+          ? `${response.contacts.length} contact${response.contacts.length === 1 ? "" : "s"} loaded.`
+          : "",
+      });
+    } catch (error) {
+      setContactStatus({
+        state: "error",
+        label: friendlyContactError(error),
+      });
+    }
+  }
+
+  async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeUser || !contactDraft.trim()) {
+      return;
+    }
+
+    setContactStatus({ state: "adding", label: "Adding contact..." });
+    try {
+      const created = await v2Client.addContact({
+        owner_user_id: activeUser.id,
+        contact: contactDraft.trim(),
+      });
+      setContacts((current) => uniqueContacts([...current, created]));
+      setSelectedContactId(created.id);
+      setContactDraft("");
+      setContactStatus({ state: "ok", label: "Contact added." });
+      void refreshContacts(activeUser.id);
+    } catch (error) {
+      setContactStatus({
+        state: "error",
+        label: friendlyContactError(error),
+      });
+    }
   }
 
   if (!activeUser) {
@@ -205,50 +264,64 @@ export function GlassChatApp() {
             </div>
           </div>
 
-          <label className="glass-search">
-            <span>Add contact</span>
-            <input
-              aria-label="Add contact by email or username"
-              disabled
-              placeholder="email or username"
-              type="text"
-            />
-          </label>
+          <form className="glass-contact-form" onSubmit={handleContactSubmit}>
+            <label className="glass-search">
+              <span>Add contact</span>
+              <input
+                aria-label="Add contact by email or username"
+                disabled={contactStatus.state === "adding"}
+                onChange={(event) => setContactDraft(event.target.value)}
+                placeholder="email or username"
+                type="text"
+                value={contactDraft}
+              />
+            </label>
+            <button
+              className="glass-contact-form__button"
+              disabled={!contactDraft.trim() || contactStatus.state === "adding"}
+              type="submit"
+            >
+              Add
+            </button>
+          </form>
 
-          <div className="glass-contact-list" aria-label="Contact previews">
-            <article className="glass-empty-contact">
-              <strong>Contacts arrive next</strong>
-              <span>Add and open direct chats in the next phase.</span>
-            </article>
-            {previewContacts.map((contact) => (
-              <article
+          {contactStatus.label ? (
+            <p
+              className={`glass-contact-status glass-contact-status--${contactStatus.state}`}
+              role={contactStatus.state === "error" ? "alert" : "status"}
+            >
+              {contactStatus.label}
+            </p>
+          ) : null}
+
+          <div className="glass-contact-list" aria-label="Contacts">
+            {contacts.length === 0 && contactStatus.state !== "loading" ? (
+              <article className="glass-empty-contact">
+                <strong>No contacts yet</strong>
+                <span>Add someone by email or username to start the list.</span>
+              </article>
+            ) : null}
+            {contacts.map((contact) => (
+              <button
                 className={`glass-contact ${
-                  contact.id === "mira" ? "glass-contact--active" : ""
+                  contact.id === selectedContactId ? "glass-contact--active" : ""
                 }`}
                 key={contact.id}
+                onClick={() => setSelectedContactId(contact.id)}
+                type="button"
               >
                 <div className="glass-avatar">
-                  <span>{getInitials(contact.name)}</span>
-                  <span
-                    className={`glass-presence glass-presence--${contact.status}`}
-                  />
+                  <span>{getInitials(contact.display_name)}</span>
+                  <span className="glass-presence glass-presence--offline" />
                 </div>
                 <div className="glass-contact__body">
                   <div className="glass-contact__line">
-                    <strong>{contact.name}</strong>
-                    <span>{contact.username}</span>
+                    <strong>{contact.display_name}</strong>
+                    <span>@{contact.username}</span>
                   </div>
-                  <p
-                    className={
-                      contact.tone === "warning"
-                        ? "glass-contact__preview glass-contact__preview--warning"
-                        : "glass-contact__preview"
-                    }
-                  >
-                    {contact.lastMessage}
-                  </p>
+                  <p className="glass-contact__preview">{contact.email}</p>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         </aside>
@@ -257,13 +330,25 @@ export function GlassChatApp() {
           <header className="glass-conversation__header">
             <div className="glass-conversation__identity">
               <div className="glass-avatar glass-avatar--large">
-                <span>MC</span>
-                <span className="glass-presence glass-presence--online" />
+                <span>
+                  {selectedContact
+                    ? getInitials(selectedContact.display_name)
+                    : "--"}
+                </span>
+                <span className="glass-presence glass-presence--offline" />
               </div>
               <div>
-                <p className="glass-kicker">Direct conversation</p>
-                <h2>Mira Chen</h2>
-                <span>Signed in as @{activeUser.username}</span>
+                <p className="glass-kicker">Contact preview</p>
+                <h2>
+                  {selectedContact
+                    ? selectedContact.display_name
+                    : "Select a contact"}
+                </h2>
+                <span>
+                  {selectedContact
+                    ? `@${selectedContact.username} | ${selectedContact.email}`
+                    : `Signed in as @${activeUser.username}`}
+                </span>
               </div>
             </div>
             <div className="glass-header-actions">
@@ -277,27 +362,40 @@ export function GlassChatApp() {
           </header>
 
           <div className="glass-message-stage" aria-label="Message preview">
-            <div className="glass-day-chip">Today</div>
-            {previewMessages.map((message) => (
-              <article
-                className={`glass-message-row glass-message-row--${message.direction}`}
-                key={message.id}
-              >
-                <div
-                  className={`glass-message glass-message--${message.tone} ${
-                    message.id === "msg-4" ? "glass-message--latest" : ""
-                  }`}
-                >
-                  <p>{message.body}</p>
-                  <footer>
-                    <time>{message.time}</time>
-                    {message.receipt ? (
-                      <span className="glass-receipt">{message.receipt}</span>
-                    ) : null}
-                  </footer>
-                </div>
+            <div className="glass-day-chip">
+              {selectedContact ? "Layout preview" : "Choose a contact"}
+            </div>
+            {!selectedContact ? (
+              <article className="glass-conversation-empty">
+                <strong>No contact selected</strong>
+                <span>
+                  Select someone from the sidebar. Direct conversation opening
+                  comes next.
+                </span>
               </article>
-            ))}
+            ) : null}
+            {selectedContact
+              ? previewMessages.map((message) => (
+                  <article
+                    className={`glass-message-row glass-message-row--${message.direction}`}
+                    key={message.id}
+                  >
+                    <div
+                      className={`glass-message glass-message--${message.tone} ${
+                        message.id === "msg-4" ? "glass-message--latest" : ""
+                      }`}
+                    >
+                      <p>{message.body}</p>
+                      <footer>
+                        <time>{message.time}</time>
+                        {message.receipt ? (
+                          <span className="glass-receipt">{message.receipt}</span>
+                        ) : null}
+                      </footer>
+                    </div>
+                  </article>
+                ))
+              : null}
           </div>
 
           <form className="glass-composer" aria-label="Message composer">
@@ -307,7 +405,11 @@ export function GlassChatApp() {
             <input
               aria-label="Message preview input"
               disabled
-              placeholder="Message Mira"
+              placeholder={
+                selectedContact
+                  ? `Message ${selectedContact.display_name}`
+                  : "Select a contact first"
+              }
               type="text"
             />
             <span className="glass-composer__send" aria-hidden="true">
@@ -354,6 +456,19 @@ function clearActiveUser() {
   window.localStorage.removeItem(activeUserStorageKey);
 }
 
+function uniqueContacts(contacts: ContactResponse[]) {
+  const seen = new Set<string>();
+  const result: ContactResponse[] = [];
+  for (const contact of contacts) {
+    if (seen.has(contact.id)) {
+      continue;
+    }
+    seen.add(contact.id);
+    result.push(contact);
+  }
+  return result;
+}
+
 function friendlyIdentityError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   if (message.includes("email already exists")) {
@@ -369,4 +484,21 @@ function friendlyIdentityError(error: unknown) {
     return "The backend is not reachable. Start the backend and try again.";
   }
   return "Could not create this demo identity. Try again in a moment.";
+}
+
+function friendlyContactError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (message.includes("contact user not found") || message.includes("404")) {
+    return "No demo user was found for that email or username.";
+  }
+  if (message.includes("cannot add self")) {
+    return "You cannot add yourself as a contact.";
+  }
+  if (message.includes("owner user not found")) {
+    return "Your active demo identity was not found. Reset and create it again.";
+  }
+  if (message.includes("failed to fetch")) {
+    return "The backend is not reachable. Start the backend and try again.";
+  }
+  return "Could not update contacts. Try again in a moment.";
 }
