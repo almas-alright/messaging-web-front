@@ -181,6 +181,10 @@ the Ubuntu PC during local testing.
 For a repeatable walkthrough, use
 [docs/local-test-checklist.md](docs/local-test-checklist.md).
 
+Glass Chat V2 is available as a separate page at `/glass-chat` while the
+current demo UI remains at `/`. To run it with the backend V2 branch, see
+[docs/v2/GLASS_CHAT_V2_RUN_GUIDE.md](docs/v2/GLASS_CHAT_V2_RUN_GUIDE.md).
+
 For frontend/backend ownership details, see
 [docs/config-boundary.md](docs/config-boundary.md).
 
