@@ -20,6 +20,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
 import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
+import { GlassChatApp } from "./features/glassChatV2/GlassChatApp";
 import {
   detectModerationRisk,
   type ModerationDetection,
@@ -78,6 +79,14 @@ type AdminFlagsStatus = {
 };
 
 export function App() {
+  if (window.location.pathname === "/glass-chat") {
+    return <GlassChatApp />;
+  }
+
+  return <DemoApp />;
+}
+
+function DemoApp() {
   const webSocketRef = useRef<MessagingWebSocket | null>(null);
   const joinedConversationRef = useRef<{
     conversationId: string;
