@@ -7,6 +7,12 @@
   padding: 20px;
 }
 
+.glass-chat-page--setup {
+  align-items: center;
+  display: grid;
+  justify-items: center;
+}
+
 .glass-chat-shell {
   background: rgba(255, 255, 255, 0.28);
   border: 1px solid rgba(255, 255, 255, 0.48);
@@ -18,6 +24,18 @@
   overflow: hidden;
 }
 
+.glass-identity-card {
+  background: rgba(255, 255, 255, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(39, 61, 55, 0.18);
+  display: grid;
+  gap: 22px;
+  max-width: 480px;
+  padding: 28px;
+  width: min(100%, 480px);
+}
+
 @supports (backdrop-filter: blur(20px)) {
   .glass-chat-shell,
   .glass-sidebar,
@@ -25,9 +43,95 @@
   .glass-composer,
   .glass-contact,
   .glass-message,
-  .glass-day-chip {
+  .glass-day-chip,
+  .glass-identity-card {
     backdrop-filter: blur(22px) saturate(140%);
   }
+}
+
+.glass-identity-card__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.glass-identity-card__copy h1 {
+  font-size: 1.72rem;
+  line-height: 1.08;
+  margin: 0;
+}
+
+.glass-identity-card__copy p:last-child {
+  color: rgba(16, 35, 29, 0.66);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.glass-identity-form {
+  display: grid;
+  gap: 14px;
+}
+
+.glass-identity-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.glass-identity-form label span {
+  color: rgba(16, 35, 29, 0.66);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.glass-identity-form input {
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: 8px;
+  color: #10231d;
+  min-height: 44px;
+  outline: none;
+  padding: 10px 12px;
+}
+
+.glass-identity-form input:focus {
+  border-color: rgba(48, 119, 102, 0.56);
+  box-shadow: 0 0 0 3px rgba(48, 119, 102, 0.12);
+}
+
+.glass-identity-status {
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.glass-identity-status--creating {
+  background: rgba(225, 247, 237, 0.64);
+  color: #245f51;
+}
+
+.glass-identity-status--error {
+  background: rgba(255, 238, 235, 0.72);
+  color: #8f3027;
+}
+
+.glass-primary-button {
+  background: rgba(48, 119, 102, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 8px;
+  box-shadow: 0 14px 30px rgba(37, 95, 81, 0.22);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 46px;
+  padding: 0 14px;
+}
+
+.glass-primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
 }
 
 .glass-sidebar {
@@ -249,6 +353,44 @@
   text-decoration: none;
 }
 
+.glass-header-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+.glass-header-actions button {
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 8px;
+  color: #245f51;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.glass-empty-contact {
+  background: rgba(255, 255, 255, 0.28);
+  border: 1px dashed rgba(48, 119, 102, 0.32);
+  border-radius: 10px;
+  color: rgba(16, 35, 29, 0.62);
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.glass-empty-contact strong {
+  color: #10231d;
+}
+
+.glass-empty-contact span {
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
 .glass-message-stage {
   align-content: end;
   background:
@@ -396,5 +538,9 @@
 
   .glass-demo-link {
     display: none;
+  }
+
+  .glass-header-actions {
+    justify-content: flex-end;
   }
 }
