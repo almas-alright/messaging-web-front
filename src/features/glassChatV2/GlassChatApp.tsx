@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   createBackendV2Client,
   type ContactConversationResponse,
+  type ContactPresenceResponse,
   type ContactResponse,
   type DemoUserResponse,
+  type PresenceStatus,
 } from "../../api/v2Client";
 import { loadStoredJwt } from "../../auth/demoAuthStorage";
 import { loadStoredConfig } from "../../config/storage";
@@ -35,6 +37,9 @@ export function GlassChatApp() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [contacts, setContacts] = useState<ContactResponse[]>([]);
+  const [presenceByUserId, setPresenceByUserId] = useState<
+    Record<string, ContactPresenceResponse>
+  >({});
   const [selectedContactId, setSelectedContactId] = useState<string | null>(
     null,
   );
@@ -77,6 +82,9 @@ export function GlassChatApp() {
   );
   const selectedContact =
     contacts.find((contact) => contact.id === selectedContactId) ?? null;
+  const selectedContactPresence = selectedContact
+    ? presenceByUserId[selectedContact.id]
+    : null;
 
   useEffect(() => {
     return () => {
@@ -88,6 +96,7 @@ export function GlassChatApp() {
   useEffect(() => {
     if (!activeUser) {
       setContacts([]);
+      setPresenceByUserId({});
       setSelectedContactId(null);
       setActiveConversation(null);
       setMessages([]);
@@ -130,6 +139,7 @@ export function GlassChatApp() {
       saveActiveUser(created);
       setActiveUser(created);
       setContacts([]);
+      setPresenceByUserId({});
       setSelectedContactId(null);
       setActiveConversation(null);
       setMessages([]);
@@ -152,6 +162,7 @@ export function GlassChatApp() {
     clearActiveUser();
     setActiveUser(null);
     setContacts([]);
+    setPresenceByUserId({});
     setSelectedContactId(null);
     setActiveConversation(null);
     setMessages([]);
@@ -168,6 +179,7 @@ export function GlassChatApp() {
     try {
       const response = await v2Client.listContacts(ownerUserId);
       setContacts(uniqueContacts(response.contacts));
+      await refreshContactPresence(ownerUserId);
       setSelectedContactId((current) => {
         if (
           current &&
@@ -267,10 +279,16 @@ export function GlassChatApp() {
     const client = createMessagingWebSocket(loadStoredConfig(), jwtToken, {
       onOpen: () => {
         setSocketStatus({ state: "connecting", label: "Joining conversation..." });
+        if (activeUser) {
+          void refreshContactPresence(activeUser.id);
+        }
       },
       onMessage: (event) => handleGlassSocketMessage(event, conversationId),
       onClose: () => {
         setSocketStatus({ state: "idle", label: "Chat disconnected." });
+        if (activeUser) {
+          void refreshContactPresence(activeUser.id);
+        }
       },
       onError: () => {
         setSocketStatus({
@@ -287,6 +305,15 @@ export function GlassChatApp() {
   function disconnectGlassSocket() {
     webSocketRef.current?.disconnect();
     webSocketRef.current = null;
+  }
+
+  async function refreshContactPresence(ownerUserId: string) {
+    try {
+      const response = await v2Client.getContactsPresence(ownerUserId);
+      setPresenceByUserId(presenceMapFromContacts(response.contacts));
+    } catch {
+      // Presence is advisory for this phase; contact loading and chat still work.
+    }
   }
 
   function handleGlassSocketMessage(event: ServerEvent, conversationId: string) {
@@ -484,14 +511,20 @@ export function GlassChatApp() {
               >
                 <div className="glass-avatar">
                   <span>{getInitials(contact.display_name)}</span>
-                  <span className="glass-presence glass-presence--offline" />
+                  <span
+                    className={`glass-presence glass-presence--${presenceStatusFor(
+                      presenceByUserId[contact.id]?.status,
+                    )}`}
+                  />
                 </div>
                 <div className="glass-contact__body">
                   <div className="glass-contact__line">
                     <strong>{contact.display_name}</strong>
                     <span>@{contact.username}</span>
                   </div>
-                  <p className="glass-contact__preview">{contact.email}</p>
+                  <p className="glass-contact__preview">
+                    {presenceLabel(presenceByUserId[contact.id])} | {contact.email}
+                  </p>
                 </div>
               </button>
             ))}
@@ -507,7 +540,11 @@ export function GlassChatApp() {
                     ? getInitials(selectedContact.display_name)
                     : "--"}
                 </span>
-                <span className="glass-presence glass-presence--offline" />
+                <span
+                  className={`glass-presence glass-presence--${presenceStatusFor(
+                    selectedContactPresence?.status,
+                  )}`}
+                />
               </div>
               <div>
                 <p className="glass-kicker">
@@ -520,7 +557,9 @@ export function GlassChatApp() {
                 </h2>
                 <span>
                   {selectedContact
-                    ? `@${selectedContact.username} | ${selectedContact.email}`
+                    ? `@${selectedContact.username} | ${presenceLabel(
+                        selectedContactPresence,
+                      )}`
                     : `Signed in as @${activeUser.username}`}
                 </span>
               </div>
@@ -697,6 +736,45 @@ function uniqueContacts(contacts: ContactResponse[]) {
     result.push(contact);
   }
   return result;
+}
+
+function presenceMapFromContacts(contacts: ContactPresenceResponse[]) {
+  return contacts.reduce<Record<string, ContactPresenceResponse>>(
+    (result, contact) => {
+      result[contact.id] = contact;
+      return result;
+    },
+    {},
+  );
+}
+
+function presenceStatusFor(status: PresenceStatus | undefined) {
+  return status === "online" || status === "away" ? status : "offline";
+}
+
+function presenceLabel(presence: ContactPresenceResponse | null | undefined) {
+  if (!presence || presence.status === "offline") {
+    return presence?.last_active_at
+      ? `last active ${formatPresenceTime(presence.last_active_at)}`
+      : "offline";
+  }
+  if (presence.status === "away") {
+    return "away";
+  }
+  return "online";
+}
+
+function formatPresenceTime(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "recently";
+  }
+  return parsed.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function appendMessageIfNew(messages: GlassMessage[], nextMessage: GlassMessage) {

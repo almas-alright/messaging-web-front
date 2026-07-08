@@ -231,6 +231,10 @@
   background: #91a19a;
 }
 
+.glass-presence--away {
+  background: #e8b94f;
+}
+
 .glass-search {
   display: grid;
   gap: 8px;
