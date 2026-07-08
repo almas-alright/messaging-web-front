@@ -543,6 +543,14 @@
   font-weight: 800;
 }
 
+.glass-receipt--sending {
+  color: rgba(16, 35, 29, 0.46);
+}
+
+.glass-receipt--seen {
+  color: #247dba;
+}
+
 .glass-message--latest {
   animation: glass-message-drift 5s ease-in-out infinite;
   box-shadow: 0 22px 46px rgba(125, 62, 56, 0.16);

@@ -12,6 +12,7 @@ import { loadStoredConfig } from "../../config/storage";
 import {
   createMessagingWebSocket,
   type MessageCreatedEvent,
+  type MessageReceiptEvent,
   type MessagingWebSocket,
   type ServerEvent,
 } from "../../realtime/webSocketClient";
@@ -21,15 +22,18 @@ const activeUserStorageKey = "messaging-web-front:glass-chat-v2:active-user";
 
 type GlassMessage = {
   id: string;
+  clientMessageId?: string;
   conversationId: string;
   senderId: string;
   body: string;
   createdAt: string;
   policyStatus: "clean" | "flagged" | "blocked";
+  receiptStatus?: "sending" | "sent" | "delivered" | "seen";
 };
 
 export function GlassChatApp() {
   const webSocketRef = useRef<MessagingWebSocket | null>(null);
+  const seenMessageIdsRef = useRef<Set<string>>(new Set());
   const [activeUser, setActiveUser] = useState<DemoUserResponse | null>(() =>
     loadActiveUser(),
   );
@@ -238,6 +242,7 @@ export function GlassChatApp() {
     setSelectedContactId(contact.id);
     setActiveConversation(null);
     setMessages([]);
+    seenMessageIdsRef.current = new Set();
     setMessageDraft("");
     disconnectGlassSocket();
     setConversationStatus({
@@ -341,8 +346,15 @@ export function GlassChatApp() {
     }
 
     if (isMessageCreatedEvent(event) && event.conversation_id === conversationId) {
-      setMessages((current) => appendMessageIfNew(current, messageFromEvent(event)));
+      const nextMessage = messageFromEvent(event, activeUser?.id);
+      setMessages((current) => upsertMessageFromServer(current, nextMessage));
+      void markContactMessageSeen(nextMessage);
       setSocketStatus({ state: "joined", label: "Live chat connected." });
+      return;
+    }
+
+    if (isMessageReceiptEvent(event) && event.conversation_id === conversationId) {
+      setMessages((current) => updateMessageReceipt(current, event));
       return;
     }
 
@@ -357,15 +369,28 @@ export function GlassChatApp() {
   function handleMessageSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const body = messageDraft.trim();
-    if (!activeConversation || !body) {
+    if (!activeConversation || !activeUser || !body) {
       return;
     }
 
+    const clientMessageId = createClientMessageId();
+    const optimisticMessage: GlassMessage = {
+      id: clientMessageId,
+      clientMessageId,
+      conversationId: activeConversation.conversation_id,
+      senderId: activeUser.id,
+      body,
+      createdAt: new Date().toISOString(),
+      policyStatus: "clean",
+      receiptStatus: "sending",
+    };
+
     try {
+      setMessages((current) => appendMessageIfNew(current, optimisticMessage));
       webSocketRef.current?.send({
         type: "message.send",
         conversation_id: activeConversation.conversation_id,
-        client_message_id: createClientMessageId(),
+        client_message_id: clientMessageId,
         body,
       });
       setMessageDraft("");
@@ -375,6 +400,30 @@ export function GlassChatApp() {
         state: "error",
         label: error instanceof Error ? error.message : "Message send failed.",
       });
+      setMessages((current) =>
+        current.filter((message) => message.id !== optimisticMessage.id),
+      );
+    }
+  }
+
+  async function markContactMessageSeen(message: GlassMessage) {
+    if (!activeUser || message.senderId === activeUser.id) {
+      return;
+    }
+    if (seenMessageIdsRef.current.has(message.id)) {
+      return;
+    }
+
+    const jwtToken = loadStoredJwt().trim();
+    if (!jwtToken) {
+      return;
+    }
+
+    seenMessageIdsRef.current.add(message.id);
+    try {
+      await v2Client.markMessageSeen(jwtToken, message.id);
+    } catch {
+      seenMessageIdsRef.current.delete(message.id);
     }
   }
 
@@ -638,6 +687,15 @@ export function GlassChatApp() {
                             {message.policyStatus}
                           </span>
                         ) : null}
+                        {message.senderId === activeUser.id &&
+                        message.receiptStatus ? (
+                          <span
+                            className={`glass-receipt glass-receipt--${message.receiptStatus}`}
+                            title={message.receiptStatus}
+                          >
+                            {receiptLabel(message.receiptStatus)}
+                          </span>
+                        ) : null}
                       </footer>
                     </div>
                   </article>
@@ -784,15 +842,89 @@ function appendMessageIfNew(messages: GlassMessage[], nextMessage: GlassMessage)
   return [...messages, nextMessage];
 }
 
-function messageFromEvent(event: MessageCreatedEvent): GlassMessage {
+function upsertMessageFromServer(
+  messages: GlassMessage[],
+  nextMessage: GlassMessage,
+) {
+  const matchingClientIndex = nextMessage.clientMessageId
+    ? messages.findIndex(
+        (message) => message.clientMessageId === nextMessage.clientMessageId,
+      )
+    : -1;
+  if (matchingClientIndex >= 0) {
+    return messages.map((message, index) =>
+      index === matchingClientIndex
+        ? {
+            ...nextMessage,
+            receiptStatus: maxReceiptStatus(
+              message.receiptStatus ?? "sending",
+              nextMessage.receiptStatus ?? "sent",
+            ),
+          }
+        : message,
+    );
+  }
+  return appendMessageIfNew(messages, nextMessage);
+}
+
+function updateMessageReceipt(
+  messages: GlassMessage[],
+  event: MessageReceiptEvent,
+) {
+  return messages.map((message) => {
+    if (message.id !== event.message_id) {
+      return message;
+    }
+    return {
+      ...message,
+      receiptStatus: maxReceiptStatus(
+        message.receiptStatus ?? "sent",
+        event.status,
+      ),
+    };
+  });
+}
+
+function messageFromEvent(
+  event: MessageCreatedEvent,
+  activeUserId: string | undefined,
+): GlassMessage {
   return {
     id: event.message_id,
+    clientMessageId: event.client_message_id,
     conversationId: event.conversation_id,
     senderId: event.sender_id,
     body: event.body,
     createdAt: event.created_at || new Date().toISOString(),
     policyStatus: event.policy_status,
+    receiptStatus: event.sender_id === activeUserId ? "sent" : undefined,
   };
+}
+
+function maxReceiptStatus(
+  current: NonNullable<GlassMessage["receiptStatus"]>,
+  next: NonNullable<GlassMessage["receiptStatus"]>,
+) {
+  const rank: Record<NonNullable<GlassMessage["receiptStatus"]>, number> = {
+    sending: 0,
+    sent: 1,
+    delivered: 2,
+    seen: 3,
+  };
+  return rank[next] > rank[current] ? next : current;
+}
+
+function receiptLabel(status: NonNullable<GlassMessage["receiptStatus"]>) {
+  if (status === "sending") {
+    return "...";
+  }
+  if (status === "sent") {
+    return "✓";
+  }
+  if (status === "delivered") {
+    return "✓✓";
+  }
+  return "✓✓ seen";
 }
 
 function messageTone(message: GlassMessage) {
@@ -831,6 +963,18 @@ function isMessageCreatedEvent(event: ServerEvent): event is MessageCreatedEvent
     typeof event.sender_id === "string" &&
     "body" in event &&
     typeof event.body === "string"
+  );
+}
+
+function isMessageReceiptEvent(event: ServerEvent): event is MessageReceiptEvent {
+  return (
+    (event.type === "message.delivered" || event.type === "message.seen") &&
+    "message_id" in event &&
+    typeof event.message_id === "string" &&
+    "conversation_id" in event &&
+    typeof event.conversation_id === "string" &&
+    "status" in event &&
+    (event.status === "delivered" || event.status === "seen")
   );
 }
 
