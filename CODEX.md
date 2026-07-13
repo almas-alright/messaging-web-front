@@ -1,6 +1,6 @@
 # Messaging Web Front Codex Entry Point
 
-You are the implementation assistant for a simple frontend-only chat application.
+You are the implementation assistant for the frontend-only chat application.
 
 ## Read First
 
@@ -9,74 +9,81 @@ Start with only:
 ```text
 AGENTS.md
 CODEX.md
-.workflows/phase-plan.md
-.workflows/task-checklist.md
+.agent/CURRENT_PLAN.md
+.agent/EXECUTION_RULES.md
 ```
 
-Read other files only when the current phase needs them.
+Then read only the active plan files listed in `.agent/CURRENT_PLAN.md`.
 
-## Current Product Goal
+Do not read archived plans, old workflow files, all docs, or the whole repository before every run.
 
-Build a simple WhatsApp-like web chat frontend for local testing of the messaging backend service.
+## Product Goal
 
-The frontend must support:
+Build a clean frontend for a reusable messaging service.
 
-- configurable API base URL
-- configurable WebSocket URL
-- manual JWT paste
-- connection status
-- conversation join
-- realtime message send/receive
-- emoji input
-- file upload/send
-- message history through backend WebSocket event
-- local network testing from another computer
-
-## Backend Contract
-
-Backend repo:
-
-```text
-https://github.com/almas-alright/messaging-service
-```
-
-Expected backend routes/events:
-
-- `GET /health`
-- `GET /ready`
-- `GET /auth/me`
-- `POST /conversations/{id}/attachments`
-- `GET /attachments/{id}`
-- WebSocket: `/ws?token=<JWT>`
-- WebSocket event: `conversation.join`
-- WebSocket event: `conversation.history`
-- WebSocket event: `message.send`
-
-## Phase Discipline
-
-- Execute only the requested or next unchecked phase.
-- One phase = one branch.
-- One task = one commit.
-- Stop after the phase.
-- Do not jump to future embed/widget/AI/voice phases early.
-
-## Frontend Boundary
-
-This repo owns:
+The frontend owns:
 
 - chat UI
 - frontend state
-- backend API/WebSocket client
+- backend API clients
+- WebSocket client integration
+- login/support/widget user experiences
 - local configuration UX
-- file picker/upload UX
-- emoji UX
-- future embeddable widget UI
 
-This repo does not own:
+The frontend does not own backend identity verification, token issuing, message persistence, or conversation permission enforcement.
 
-- backend API implementation
-- message persistence
-- JWT issuing
-- AI bot service
-- human support routing backend
-- production moderation logic
+## Current Workflow
+
+`.agent/CURRENT_PLAN.md` is the current disk inserted into the player.
+
+When the user says `next`:
+
+1. Read `.agent/CURRENT_PLAN.md`.
+2. If `active_plan` is `none`, stop and ask for a plan folder.
+3. Read only the active plan `TASKS.md`, `ACCEPTANCE.md`, and `DECISIONS.md` if present.
+4. Find the first unchecked task.
+5. Implement only that task.
+6. Update the task checkbox.
+7. Update `.agent/state/HANDOFF.md`.
+8. Commit once to the active plan branch.
+9. Stop.
+
+## Branch Rule
+
+A plan defines its branch.
+
+Example:
+
+```text
+active_plan: .agent/plans/2026-07-auth-ui-foundation
+active_branch: auth-ui-foundation
+```
+
+All phase-by-phase task commits for that plan stay on that branch unless the plan explicitly changes it.
+
+## Token-Saving Read Rule
+
+Always prefer the smallest useful context:
+
+- current plan pointer
+- active task
+- acceptance criteria
+- directly relevant components/clients
+- directly relevant tests or build config
+
+Do not scan large docs, legacy workflows, or unrelated UI modules unless the current task requires them.
+
+## Hard Rules
+
+- One task = one commit.
+- Stop after task completion.
+- Do not jump ahead.
+- Do not implement future tasks early.
+- Do not duplicate backend auth or permission logic in frontend.
+- Do not keep manual demo JWT dependency in production UI plans unless the active task asks for migration scaffolding.
+- Run applicable checks before commit.
+
+## Legacy Workflow
+
+The previous `.workflows/phase-plan.md` and `.workflows/task-checklist.md` files are historical only.
+They are not the execution source anymore.
