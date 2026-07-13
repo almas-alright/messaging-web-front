@@ -17,64 +17,81 @@ https://github.com/almas-alright/messaging-service
 - Vite
 - React
 - TypeScript
-- Simple CSS first
-- Browser WebSocket
 - Browser Fetch API
-- No heavy UI library in the first demo
+- Browser WebSocket
+- Configurable backend API and WebSocket URLs
 
-## Product Direction
+## Agent Entry Point
 
-Initial demo:
+Start with only:
 
-- WhatsApp-like chat window
-- Manual JWT input
-- Configurable backend API base URL
-- Configurable WebSocket URL
-- Conversation join
-- Realtime send/receive
-- Emoji support
-- File upload/send
-- Attachment link/preview
-- Local network demo from Ubuntu host
+1. `CODEX.md`
+2. `.agent/CURRENT_PLAN.md`
+3. `.agent/EXECUTION_RULES.md`
+4. The active plan files named by `.agent/CURRENT_PLAN.md`
 
-Future:
+Read other files only when required by the current task.
+Do not read every `docs/`, `.workflows/`, archived plan, or source file by default.
 
-- tawk.to-like embeddable chat widget
-- iframe/script embed
-- compact floating chat launcher
-- voice message sending
-- optional AI bot on a specific chat side
-- human takeover from AI bot
+## Current Plan Rule
 
-## Hard Rules
+`.agent/CURRENT_PLAN.md` is the single source of truth for active work.
 
-- Frontend only.
-- Do not implement backend code here.
-- Do not duplicate backend business logic.
-- Backend URL and WebSocket URL must be configurable.
-- Do not hardcode `localhost` as the only usable backend target.
-- Do not implement AI bot in first demo.
-- Do not implement voice messages in first demo.
-- Do not implement embed widget in first demo.
-- Keep the UI simple and testable.
+If `active_plan` is `none`, do not implement anything. Ask for a plan folder to be inserted.
+
+Legacy `.workflows/*` files are no longer the execution source. They are historical references only.
+
+## Frontend Boundary
+
+This repo owns:
+
+- chat UI
+- frontend state
+- API/WebSocket client code
+- local configuration UX
+- auth UI and token storage UX
+- future support widget UI
+
+This repo does not own:
+
+- backend API implementation
+- message persistence
+- OAuth provider verification
+- token issuing
+- conversation permission enforcement
+- production moderation logic
 
 ## Workflow Rules
 
-- One phase = one branch.
+- One dated/named plan = one working branch unless the plan explicitly says otherwise.
+- All phases/tasks under that plan are committed to that plan branch.
 - One task = one commit.
-- Stop after each phase.
-- Do not do all phases together.
+- Stop after each task or phase, matching the current plan instruction.
+- Do not jump to later tasks.
+- Do not redesign completed work unless the active task explicitly requires refactor.
 
-Branch format:
+Branch format for plan branches:
 
 ```text
-phase/<phase-number>-<phase-slug>
+<plan-slug>
+```
+
+Example:
+
+```text
+auth-ui-foundation
 ```
 
 Commit format:
 
 ```text
-task(<phase-number>.<task-number>): <short task summary>
+task(<plan-id>.<task-number>): <short task summary>
+```
+
+Example:
+
+```text
+task(auth-ui-foundation.01): add login route shell
 ```
 
 ## Required Checks
@@ -87,17 +104,17 @@ npm run build
 npm run lint
 ```
 
-If lint is not configured yet, do not invent extra tooling unless the phase asks for it.
+If lint is not configured yet, do not invent extra tooling unless the active task asks for it.
 
 ## Stop Rule
 
-After each phase, report:
+After a task or phase, report:
 
 - Branch
-- Commits
+- Commit
 - Files changed
 - Checks run
 - Blockers
-- Next phase
+- Next task
 
-Do not continue to the next phase without approval.
+Do not continue without approval or a fresh `next` instruction.
