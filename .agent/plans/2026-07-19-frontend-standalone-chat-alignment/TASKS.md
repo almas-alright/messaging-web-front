@@ -99,11 +99,11 @@ task(frontend-chat.05): add provider login ui hooks
 
 ## FE-CHAT-06 — Authenticated app shell
 
-- [ ] FE-CHAT-06.01 Split unauthenticated and authenticated app states
-- [ ] FE-CHAT-06.02 Show current user profile from `/auth/me`
-- [ ] FE-CHAT-06.03 Add logout action
-- [ ] FE-CHAT-06.04 Route authenticated users into standalone chat UI
-- [ ] FE-CHAT-06.05 Keep old demo route available only if still needed for dev reference
+- [x] FE-CHAT-06.01 Split unauthenticated and authenticated app states
+- [x] FE-CHAT-06.02 Show current user profile from `/auth/me`
+- [x] FE-CHAT-06.03 Add logout action
+- [x] FE-CHAT-06.04 Route authenticated users into standalone chat UI
+- [x] FE-CHAT-06.05 Keep old demo route available only if still needed for dev reference
 
 Commit:
 

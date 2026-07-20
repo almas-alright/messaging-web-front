@@ -20,6 +20,78 @@ body {
   min-height: 100vh;
 }
 
+.session-gate {
+  display: grid;
+  min-height: 100vh;
+  padding: 24px;
+  place-items: center;
+}
+
+.session-gate__card {
+  background: #ffffff;
+  border: 1px solid #d9e0da;
+  border-radius: 12px;
+  display: grid;
+  gap: 14px;
+  max-width: 440px;
+  padding: 28px;
+  width: 100%;
+}
+
+.session-gate__card h1,
+.session-gate__card p {
+  margin: 0;
+}
+
+.authenticated-app {
+  background: #eef3f1;
+  min-height: 100vh;
+}
+
+.authenticated-header {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #d9e0da;
+  display: flex;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 12px 20px;
+}
+
+.authenticated-header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.authenticated-header span {
+  color: #66736d;
+  font-size: 0.84rem;
+}
+
+.authenticated-header button {
+  background: #ffffff;
+  border: 1px solid #ccd6cf;
+  border-radius: 8px;
+  color: #25332d;
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 40px;
+  padding: 8px 14px;
+}
+
+.authenticated-header button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.authenticated-app .glass-chat-page {
+  min-height: calc(100vh - 72px);
+}
+
+.authenticated-app .glass-chat-shell {
+  min-height: calc(100vh - 112px);
+}
+
 .auth-page {
   align-items: center;
   display: grid;

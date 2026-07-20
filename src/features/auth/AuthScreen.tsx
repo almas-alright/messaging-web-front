@@ -13,7 +13,11 @@ import { loadAuthProviderConfig } from "../../config/env";
 
 type AuthMode = "login" | "register";
 
-export function AuthScreen() {
+type AuthScreenProps = {
+  onAuthenticated?: (user: AuthUserResponse) => void;
+};
+
+export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,6 +72,7 @@ export function AuthScreen() {
       const user = await authClient.getMe(tokenResponse.access_token);
       setCurrentUser(user);
       setPassword("");
+      onAuthenticated?.(user);
     } catch (error) {
       clearStoredSession();
       setErrorMessage(authErrorMessage(error));

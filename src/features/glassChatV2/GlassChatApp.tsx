@@ -617,8 +617,8 @@ export function GlassChatApp() {
               <button type="button" onClick={handleIdentityReset}>
                 Reset identity
               </button>
-              <a className="glass-demo-link" href="/">
-                Current demo
+              <a className="glass-demo-link" href="/demo">
+                Developer demo
               </a>
             </div>
           </header>
