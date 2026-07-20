@@ -183,6 +183,70 @@
   line-height: 1.5;
 }
 
+.support-widget-welcome-form {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.support-widget-welcome-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.support-widget-welcome-form label > span {
+  color: var(--support-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.support-widget-welcome-form input {
+  background: var(--support-bg);
+  border: 1px solid var(--support-border);
+  border-radius: 9px;
+  color: var(--support-text);
+  min-height: 44px;
+  outline: none;
+  padding: 10px 12px;
+}
+
+.support-widget-welcome-form input:focus {
+  border-color: var(--support-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--support-accent) 16%, transparent);
+}
+
+.support-widget-start-button {
+  background: var(--support-accent);
+  border: 0;
+  border-radius: 9px;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 10px 14px;
+}
+
+.support-widget-start-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.support-widget-start-status {
+  border: 1px solid var(--support-border);
+  border-radius: 8px;
+  color: var(--support-muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  margin: 0;
+  padding: 9px 10px;
+}
+
+.support-widget-start-status--error {
+  background: rgba(160, 45, 35, 0.1);
+  color: #91362d;
+}
+
 .support-widget-footer {
   align-items: center;
   background: var(--support-bg);

@@ -1,5 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  createSupportApiClient,
+  SupportApiError,
+} from "./apiClient";
 import type { SupportWidgetConfig } from "./config";
+import {
+  saveSupportVisitorSession,
+  type SupportVisitorSession,
+} from "./visitorSessionStorage";
 import "./supportWidget.css";
 
 export type SupportWidgetState =
@@ -14,6 +22,13 @@ type SupportWidgetProps = {
 
 export function SupportWidget({ config }: SupportWidgetProps) {
   const [state, setState] = useState<SupportWidgetState>("collapsed");
+  const [email, setEmail] = useState("");
+  const [visitorSession, setVisitorSession] =
+    useState<SupportVisitorSession | null>(null);
+  const [startStatus, setStartStatus] = useState<{
+    state: "idle" | "submitting" | "success" | "error";
+    message: string;
+  }>({ state: "idle", message: "" });
   const openingTimerRef = useRef<number | null>(null);
   const panelId = "support-widget-panel";
 
@@ -42,6 +57,37 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       openingTimerRef.current = null;
     }
     setState("collapsed");
+  }
+
+  async function handleWelcomeSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!config.tenantId) {
+      setStartStatus({
+        state: "error",
+        message: "Support is not configured for this page.",
+      });
+      return;
+    }
+
+    setStartStatus({ state: "submitting", message: "Starting support…" });
+    try {
+      const response = await createSupportApiClient(config).startSession({
+        tenant_id: config.tenantId,
+        email: email.trim(),
+      });
+      const session = saveSupportVisitorSession(config.tenantId, response);
+      setVisitorSession(session);
+      setEmail("");
+      setStartStatus({
+        state: "success",
+        message: "Your support conversation is ready.",
+      });
+    } catch (error) {
+      setStartStatus({
+        state: "error",
+        message: friendlyStartError(error),
+      });
+    }
   }
 
   if (state === "collapsed") {
@@ -116,18 +162,60 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       </header>
 
       <div className="support-widget-body">
-        <div className="support-widget-welcome" role="status">
-          <span aria-hidden="true">?</span>
-          <h2>How can we help?</h2>
-          <p>Start a conversation with our support team.</p>
-        </div>
+        {visitorSession ? (
+          <div className="support-widget-welcome" role="status">
+            <span aria-hidden="true">✓</span>
+            <h2>Conversation started</h2>
+            <p>{startStatus.message}</p>
+          </div>
+        ) : (
+          <form className="support-widget-welcome-form" onSubmit={handleWelcomeSubmit}>
+            <div className="support-widget-welcome">
+              <span aria-hidden="true">?</span>
+              <h2>How can we help?</h2>
+              <p>Enter your email to start a private support conversation.</p>
+            </div>
+            <label>
+              <span>Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                required
+                disabled={startStatus.state === "submitting"}
+              />
+            </label>
+            {startStatus.message ? (
+              <p
+                className={`support-widget-start-status support-widget-start-status--${startStatus.state}`}
+                role={startStatus.state === "error" ? "alert" : "status"}
+              >
+                {startStatus.message}
+              </p>
+            ) : null}
+            <button
+              className="support-widget-start-button"
+              type="submit"
+              disabled={startStatus.state === "submitting"}
+            >
+              {startStatus.state === "submitting"
+                ? "Starting…"
+                : "Start conversation"}
+            </button>
+          </form>
+        )}
       </div>
 
       <footer className="support-widget-footer">
         <input
           type="text"
           aria-label="Support message"
-          placeholder="Messaging becomes available after you start a conversation"
+          placeholder={
+            visitorSession
+              ? "Messaging is ready for the next step"
+              : "Start a conversation to send messages"
+          }
           disabled
         />
         <button type="button" disabled aria-label="Send support message">
@@ -136,4 +224,11 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       </footer>
     </section>
   );
+}
+
+function friendlyStartError(error: unknown) {
+  if (error instanceof SupportApiError) {
+    return error.message;
+  }
+  return "Support is temporarily unavailable. Please try again.";
 }

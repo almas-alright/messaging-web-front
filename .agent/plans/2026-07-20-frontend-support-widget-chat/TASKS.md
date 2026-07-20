@@ -46,11 +46,11 @@ task(frontend-support.02): add floating support widget shell
 
 ## FE-SUPPORT-03 — Visitor session start flow
 
-- [ ] FE-SUPPORT-03.01 Add support API client for `POST /support/sessions/start`
-- [ ] FE-SUPPORT-03.02 Add visitor welcome form with name/email/message fields where backend contract allows
-- [ ] FE-SUPPORT-03.03 Start visitor support session and store visitor token/conversation id
-- [ ] FE-SUPPORT-03.04 Scope stored visitor session by tenant id
-- [ ] FE-SUPPORT-03.05 Show neutral success/error states without revealing account existence
+- [x] FE-SUPPORT-03.01 Add support API client for `POST /support/sessions/start`
+- [x] FE-SUPPORT-03.02 Add visitor welcome form with name/email/message fields where backend contract allows
+- [x] FE-SUPPORT-03.03 Start visitor support session and store visitor token/conversation id
+- [x] FE-SUPPORT-03.04 Scope stored visitor session by tenant id
+- [x] FE-SUPPORT-03.05 Show neutral success/error states without revealing account existence
 
 Commit:
 
