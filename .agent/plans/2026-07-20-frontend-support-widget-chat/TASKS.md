@@ -110,11 +110,15 @@ task(frontend-support.06): add support email verification ui
 
 ## FE-SUPPORT-07 — Support agent inbox
 
-- [ ] FE-SUPPORT-07.01 Add authenticated support inbox route or section in main app
-- [ ] FE-SUPPORT-07.02 List support conversations using existing authenticated conversation APIs where possible
-- [ ] FE-SUPPORT-07.03 Open selected support conversation
-- [ ] FE-SUPPORT-07.04 Show visitor identity safely: verified email if verified, otherwise visitor/session label
-- [ ] FE-SUPPORT-07.05 If backend lacks support inbox/list filter, record blocker and stop this task without inventing fake API
+- [-] FE-SUPPORT-07.01 Blocked: authenticated support-agent access is not implemented by the backend
+- [-] FE-SUPPORT-07.02 Blocked: no support inbox/list filter exists in the backend API
+- [-] FE-SUPPORT-07.03 Blocked: support conversation assignment and agent read permission are undefined
+- [-] FE-SUPPORT-07.04 Blocked: the backend exposes no agent-safe visitor identity projection
+- [x] FE-SUPPORT-07.05 Backend gap recorded; no fake frontend API or inbox was added
+
+Blocker: the backend router has no support-agent credential, assignment policy,
+or tenant-scoped support conversation list endpoint. Implement those contracts
+before adding an agent inbox.
 
 Commit:
 
