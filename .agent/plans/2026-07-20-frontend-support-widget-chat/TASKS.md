@@ -30,11 +30,11 @@ task(frontend-support.01): add support widget config boundary
 
 ## FE-SUPPORT-02 — Floating widget shell
 
-- [ ] FE-SUPPORT-02.01 Add floating support launcher component
-- [ ] FE-SUPPORT-02.02 Add collapsed, opening, open, minimized states
-- [ ] FE-SUPPORT-02.03 Add widget panel layout with header/body/footer
-- [ ] FE-SUPPORT-02.04 Make widget responsive for desktop and mobile
-- [ ] FE-SUPPORT-02.05 Add local demo route/page for testing widget inside the app
+- [x] FE-SUPPORT-02.01 Add floating support launcher component
+- [x] FE-SUPPORT-02.02 Add collapsed, opening, open, minimized states
+- [x] FE-SUPPORT-02.03 Add widget panel layout with header/body/footer
+- [x] FE-SUPPORT-02.04 Make widget responsive for desktop and mobile
+- [x] FE-SUPPORT-02.05 Add local demo route/page for testing widget inside the app
 
 Commit:
 

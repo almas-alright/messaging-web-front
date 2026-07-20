@@ -29,6 +29,7 @@ import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
 import { AuthScreen } from "./features/auth/AuthScreen";
 import { GlassChatApp } from "./features/glassChatV2/GlassChatApp";
+import { SupportWidgetDemoPage } from "./features/supportWidget";
 import {
   detectModerationRisk,
   type ModerationDetection,
@@ -87,6 +88,9 @@ type AdminFlagsStatus = {
 };
 
 export function App() {
+  if (window.location.pathname === "/support-widget-demo") {
+    return <SupportWidgetDemoPage />;
+  }
   return window.location.pathname === "/demo" ? <DemoApp /> : <StandaloneApp />;
 }
 
