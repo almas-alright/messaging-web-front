@@ -42,6 +42,17 @@
   z-index: 1000;
 }
 
+.support-widget-panel:focus {
+  outline: none;
+}
+
+.support-widget-panel :focus-visible,
+.support-widget-launcher:focus-visible,
+.support-widget-minimized :focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--support-accent) 48%, white);
+  outline-offset: 2px;
+}
+
 .support-widget-launcher > span,
 .support-widget-welcome > span {
   align-items: center;
@@ -156,6 +167,7 @@
   display: grid;
   overflow: auto;
   padding: 24px;
+  min-height: 0;
 }
 
 .support-widget-welcome {
@@ -251,7 +263,7 @@
   align-self: stretch;
   display: grid;
   gap: 14px;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto minmax(120px, 1fr);
   width: 100%;
 }
 
@@ -365,6 +377,54 @@
   gap: 10px;
 }
 
+.support-widget-empty {
+  align-self: center;
+  color: var(--support-text);
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+  padding: 22px 10px;
+  text-align: center;
+}
+
+.support-widget-empty > span {
+  align-items: center;
+  background: var(--support-accent);
+  border-radius: 50%;
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 900;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.support-widget-empty h2,
+.support-widget-empty p {
+  margin: 0;
+}
+
+.support-widget-empty p {
+  color: var(--support-muted);
+  line-height: 1.45;
+}
+
+.support-widget-empty button {
+  background: var(--support-accent);
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  margin-top: 4px;
+  padding: 8px 12px;
+}
+
+.support-widget-empty--error > span,
+.support-widget-empty--disconnected > span {
+  background: #91362d;
+}
+
 .support-widget-message {
   background: var(--support-bg);
   border: 1px solid var(--support-border);
@@ -428,6 +488,16 @@
 .support-widget-footer :disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.support-widget-sr-only {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .support-widget-demo {
@@ -558,10 +628,17 @@
   }
 
   .support-widget-panel {
-    bottom: 12px;
-    height: min(620px, calc(100vh - 24px));
-    right: 12px;
-    width: calc(100vw - 24px);
+    border: 0;
+    border-radius: 0;
+    bottom: 0;
+    height: 100vh;
+    height: 100dvh;
+    right: 0;
+    width: 100vw;
+  }
+
+  .support-widget-body {
+    padding: 16px;
   }
 
   .support-widget-demo {

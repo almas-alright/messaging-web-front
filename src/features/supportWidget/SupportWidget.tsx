@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import {
   createSupportApiClient,
   SupportApiError,
@@ -57,6 +63,10 @@ export function SupportWidget({ config }: SupportWidgetProps) {
     message: string;
   }>({ state: "idle", message: "" });
   const openingTimerRef = useRef<number | null>(null);
+  const launcherRef = useRef<HTMLButtonElement | null>(null);
+  const minimizedOpenRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const restoreFocusRef = useRef<"launcher" | "minimized" | null>(null);
   const webSocketRef = useRef<MessagingWebSocket | null>(null);
   const readyUserIdRef = useRef<string | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
@@ -82,6 +92,22 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       webSocketRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (state === "opening") {
+      panelRef.current?.focus();
+      return;
+    }
+    if (state === "collapsed" && restoreFocusRef.current === "launcher") {
+      launcherRef.current?.focus();
+      restoreFocusRef.current = null;
+      return;
+    }
+    if (state === "minimized" && restoreFocusRef.current === "minimized") {
+      minimizedOpenRef.current?.focus();
+      restoreFocusRef.current = null;
+    }
+  }, [state]);
 
   useEffect(() => {
     if (!visitorSession) return;
@@ -130,7 +156,23 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       window.clearTimeout(openingTimerRef.current);
       openingTimerRef.current = null;
     }
+    restoreFocusRef.current = "launcher";
     setState("collapsed");
+  }
+
+  function minimizeWidget() {
+    if (openingTimerRef.current !== null) {
+      window.clearTimeout(openingTimerRef.current);
+      openingTimerRef.current = null;
+    }
+    restoreFocusRef.current = "minimized";
+    setState("minimized");
+  }
+
+  function handlePanelKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    collapseWidget();
   }
 
   function resetVisitorSession(message = "Start a new support conversation.") {
@@ -432,6 +474,7 @@ export function SupportWidget({ config }: SupportWidgetProps) {
   if (state === "collapsed") {
     return (
       <button
+        ref={launcherRef}
         className="support-widget-launcher"
         type="button"
         aria-controls={panelId}
@@ -448,7 +491,13 @@ export function SupportWidget({ config }: SupportWidgetProps) {
   if (state === "minimized") {
     return (
       <div className="support-widget-minimized" data-theme={config.theme}>
-        <button type="button" onClick={openWidget} aria-controls={panelId}>
+        <button
+          ref={minimizedOpenRef}
+          type="button"
+          onClick={openWidget}
+          aria-controls={panelId}
+          aria-expanded="false"
+        >
           Open {config.brandName}
         </button>
         <button
@@ -465,10 +514,13 @@ export function SupportWidget({ config }: SupportWidgetProps) {
 
   return (
     <section
+      ref={panelRef}
       className="support-widget-panel"
       id={panelId}
       role="dialog"
-      aria-label={`${config.brandName} chat`}
+      aria-labelledby={`${panelId}-title`}
+      tabIndex={-1}
+      onKeyDown={handlePanelKeyDown}
       data-state={state}
       data-theme={config.theme}
     >
@@ -476,7 +528,7 @@ export function SupportWidget({ config }: SupportWidgetProps) {
         <div>
           <span className="support-widget-presence" aria-hidden="true" />
           <div>
-            <strong>{config.brandName}</strong>
+            <strong id={`${panelId}-title`}>{config.brandName}</strong>
             <span>We are here to help</span>
           </div>
         </div>
@@ -484,7 +536,7 @@ export function SupportWidget({ config }: SupportWidgetProps) {
           <button
             className="support-widget-icon-button"
             type="button"
-            onClick={() => setState("minimized")}
+            onClick={minimizeWidget}
             aria-label="Minimize support"
           >
             −
@@ -600,7 +652,11 @@ export function SupportWidget({ config }: SupportWidgetProps) {
                 </>
               )}
             </section>
-            <div className="support-widget-messages" aria-live="polite">
+            <div
+              className="support-widget-messages"
+              aria-live="polite"
+              aria-busy={connectionStatus.state === "connecting"}
+            >
               {messages.length ? (
                 messages.map((message) => (
                   <article
@@ -617,10 +673,23 @@ export function SupportWidget({ config }: SupportWidgetProps) {
                   </article>
                 ))
               ) : (
-                <div className="support-widget-welcome">
-                  <span aria-hidden="true">✓</span>
-                  <h2>Conversation started</h2>
-                  <p>Send a message when live support connects.</p>
+                <div
+                  className={`support-widget-empty support-widget-empty--${connectionStatus.state}`}
+                >
+                  <span aria-hidden="true">
+                    {emptyConversationIcon(connectionStatus.state)}
+                  </span>
+                  <h2>{emptyConversationTitle(connectionStatus.state)}</h2>
+                  <p>{emptyConversationMessage(connectionStatus.state)}</p>
+                  {connectionStatus.state === "error" ||
+                  connectionStatus.state === "disconnected" ? (
+                    <button
+                      type="button"
+                      onClick={() => connectVisitorSocket(visitorSession)}
+                    >
+                      Try again
+                    </button>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -629,6 +698,7 @@ export function SupportWidget({ config }: SupportWidgetProps) {
           <form
             className="support-widget-welcome-form"
             onSubmit={handleWelcomeSubmit}
+            aria-busy={startStatus.state === "submitting"}
           >
             <div className="support-widget-welcome">
               <span aria-hidden="true">?</span>
@@ -671,10 +741,15 @@ export function SupportWidget({ config }: SupportWidgetProps) {
         <input
           type="text"
           aria-label="Support message"
-          placeholder="Type your message"
+          placeholder={
+            connectionStatus.state === "joined"
+              ? "Type your message"
+              : "Waiting for support connection"
+          }
           value={messageDraft}
           onChange={(event) => setMessageDraft(event.target.value)}
           disabled={!visitorSession || connectionStatus.state !== "joined"}
+          aria-describedby={`${panelId}-composer-status`}
         />
         <button
           type="submit"
@@ -687,6 +762,9 @@ export function SupportWidget({ config }: SupportWidgetProps) {
         >
           Send
         </button>
+        <span className="support-widget-sr-only" id={`${panelId}-composer-status`}>
+          {composerStatusMessage(visitorSession, connectionStatus.state)}
+        </span>
       </form>
     </section>
   );
@@ -697,6 +775,46 @@ function friendlyStartError(error: unknown) {
     return error.message;
   }
   return "Support is temporarily unavailable. Please try again.";
+}
+
+function emptyConversationTitle(
+  state: "idle" | "connecting" | "joined" | "disconnected" | "error",
+) {
+  if (state === "connecting") return "Connecting to support";
+  if (state === "joined") return "No messages yet";
+  if (state === "error" || state === "disconnected") {
+    return "Messages are unavailable";
+  }
+  return "Conversation started";
+}
+
+function emptyConversationIcon(
+  state: "idle" | "connecting" | "joined" | "disconnected" | "error",
+) {
+  if (state === "connecting") return "…";
+  if (state === "error" || state === "disconnected") return "!";
+  return "✓";
+}
+
+function emptyConversationMessage(
+  state: "idle" | "connecting" | "joined" | "disconnected" | "error",
+) {
+  if (state === "connecting") return "Your conversation will appear here.";
+  if (state === "joined") return "Send the first message when you are ready.";
+  if (state === "error" || state === "disconnected") {
+    return "Check your connection and try again.";
+  }
+  return "Waiting for the support connection.";
+}
+
+function composerStatusMessage(
+  visitorSession: SupportVisitorSession | null,
+  state: "idle" | "connecting" | "joined" | "disconnected" | "error",
+) {
+  if (!visitorSession) return "Start a conversation before sending messages.";
+  if (state === "joined") return "Message composer is ready.";
+  if (state === "connecting") return "Message composer is waiting for support.";
+  return "Message composer is unavailable until support reconnects.";
 }
 
 function friendlyVerificationError(

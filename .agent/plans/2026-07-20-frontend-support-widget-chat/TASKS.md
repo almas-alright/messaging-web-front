@@ -179,11 +179,11 @@ task(frontend-support.09): add support widget embed demo
 
 ## FE-SUPPORT-10 — Polish, accessibility, and responsive states
 
-- [ ] FE-SUPPORT-10.01 Add keyboard accessible open/close behavior
-- [ ] FE-SUPPORT-10.02 Add focus management for widget panel
-- [ ] FE-SUPPORT-10.03 Add empty/loading/error states
-- [ ] FE-SUPPORT-10.04 Add mobile full-height panel behavior
-- [ ] FE-SUPPORT-10.05 Keep visual style consistent with current frontend
+- [x] FE-SUPPORT-10.01 Add keyboard accessible open/close behavior
+- [x] FE-SUPPORT-10.02 Add focus management for widget panel
+- [x] FE-SUPPORT-10.03 Add empty/loading/error states
+- [x] FE-SUPPORT-10.04 Add mobile full-height panel behavior
+- [x] FE-SUPPORT-10.05 Keep visual style consistent with current frontend
 
 Commit:
 
