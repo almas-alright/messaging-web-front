@@ -21,8 +21,8 @@ export type LogoutRequest = {
 };
 
 export type AuthUserResponse = {
-  id: string;
-  email: string;
+  user_id: string;
+  email?: string;
   username?: string;
   display_name: string;
   avatar_url?: string | null;

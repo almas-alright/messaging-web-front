@@ -19,6 +19,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppConfig } from "./config/env";
 import { loadStoredConfig, saveStoredConfig } from "./config/storage";
 import { ChatPanel } from "./features/chat/ChatPanel";
+import { AuthScreen } from "./features/auth/AuthScreen";
 import { GlassChatApp } from "./features/glassChatV2/GlassChatApp";
 import {
   detectModerationRisk,
@@ -78,6 +79,10 @@ type AdminFlagsStatus = {
 };
 
 export function App() {
+  if (window.location.pathname === "/auth") {
+    return <AuthScreen />;
+  }
+
   if (window.location.pathname === "/glass-chat") {
     return <GlassChatApp />;
   }

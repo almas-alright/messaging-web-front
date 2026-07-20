@@ -60,11 +60,11 @@ task(frontend-chat.03): add messaging token session lifecycle
 
 ## FE-CHAT-04 — Login/register UI
 
-- [ ] FE-CHAT-04.01 Add email/password login screen
-- [ ] FE-CHAT-04.02 Add registration screen
-- [ ] FE-CHAT-04.03 Add neutral error display
-- [ ] FE-CHAT-04.04 Add loading/submitting states
-- [ ] FE-CHAT-04.05 After login/register, load `/auth/me`
+- [x] FE-CHAT-04.01 Add email/password login screen
+- [x] FE-CHAT-04.02 Add registration screen
+- [x] FE-CHAT-04.03 Add neutral error display
+- [x] FE-CHAT-04.04 Add loading/submitting states
+- [x] FE-CHAT-04.05 After login/register, load `/auth/me`
 
 Commit:
 
