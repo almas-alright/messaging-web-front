@@ -195,11 +195,11 @@ task(frontend-support.10): polish support widget ux
 
 ## FE-SUPPORT-11 — Documentation and final checks
 
-- [ ] FE-SUPPORT-11.01 Update README with support widget run/demo instructions
-- [ ] FE-SUPPORT-11.02 Add manual test checklist: visitor browser + agent browser
-- [ ] FE-SUPPORT-11.03 Run `npm run build`
-- [ ] FE-SUPPORT-11.04 Run `npm run lint` if configured
-- [ ] FE-SUPPORT-11.05 Record final result in `.agent/state/HANDOFF.md`
+- [x] FE-SUPPORT-11.01 Update README with support widget run/demo instructions
+- [x] FE-SUPPORT-11.02 Add manual test checklist: visitor browser + agent browser
+- [x] FE-SUPPORT-11.03 Run `npm run build`
+- [x] FE-SUPPORT-11.04 Confirm `npm run lint` is not configured
+- [x] FE-SUPPORT-11.05 Record final result in `.agent/state/HANDOFF.md`
 
 Commit:
 
