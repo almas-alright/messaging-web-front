@@ -1,120 +1,70 @@
 # AGENTS.md
 
-Global rules for this frontend repository.
+## Scope
 
-## Project
+Messaging Web Front is a React + TypeScript frontend for the reusable messaging backend. Keep authentication, token handling, WebSocket connection, conversation permissions, and user-facing chat flows clean and isolated.
 
-Messaging Web Front is a frontend-only chat application for the reusable messaging backend service.
+## Minimal Startup
 
-Backend repo:
+Before selecting work, read only:
 
-```text
-https://github.com/almas-alright/messaging-service
-```
-
-## Stack
-
-- Vite
-- React
-- TypeScript
-- Browser Fetch API
-- Browser WebSocket
-- Configurable backend API and WebSocket URLs
-
-## Agent Entry Point
-
-Start with only:
-
-1. `CODEX.md`
+1. `AGENTS.md`
 2. `.agent/CURRENT_PLAN.md`
-3. `.agent/EXECUTION_RULES.md`
-4. The active plan files named by `.agent/CURRENT_PLAN.md`
+3. The active plan's `TASKS.md`
 
-Read other files only when required by the current task.
-Do not read every `docs/`, `.workflows/`, archived plan, or source file by default.
+Read only the first unchecked task and the source/test files directly related to it.
 
-## Current Plan Rule
+Do not read `CODEX.md`, `EXECUTION_RULES.md`, `PLAN.md`, `ACCEPTANCE.md`, `DECISIONS.md`, `.context/`, `.workflows/`, all docs, or archived plans by default. Open one only when the current task requires information not available in the startup files or relevant code.
 
-`.agent/CURRENT_PLAN.md` is the single source of truth for active work.
+## Workflow
 
-If `active_plan` is `none`, do not implement anything. Ask for a plan folder to be inserted.
+- `.agent/CURRENT_PLAN.md` is the source of truth. If `active_plan` is `none`, stop and ask for a plan.
+- One plan uses one branch; one task uses one commit.
+- Do only the first unchecked task, update `.agent/state/HANDOFF.md`, commit, and stop.
+- Do not redesign completed work or jump to later tasks.
+- Commit format: `task(<plan-id>.<task-number>): <short summary>`.
 
-Legacy `.workflows/*` files are no longer the execution source. They are historical references only.
+## Implementation Safety
 
-## Frontend Boundary
+- Never hardcode or log secrets, access tokens, refresh tokens, OTPs, or magic links.
+- Do not put backend-only secrets in frontend code.
+- Use messaging-issued access tokens for REST and WebSocket.
+- Keep backend URL and WebSocket URL configurable.
+- Do not implement support widget, embedded platform chat, or AI chat unless the active task requests it.
+- Keep shared client code reusable for later support widget and embedded platform phases.
 
-This repo owns:
+## Checks
 
-- chat UI
-- frontend state
-- API/WebSocket client code
-- local configuration UX
-- auth UI and token storage UX
-- future support widget UI
-
-This repo does not own:
-
-- backend API implementation
-- message persistence
-- OAuth provider verification
-- token issuing
-- conversation permission enforcement
-- production moderation logic
-
-## Workflow Rules
-
-- One dated/named plan = one working branch unless the plan explicitly says otherwise.
-- All phases/tasks under that plan are committed to that plan branch.
-- One task = one commit.
-- Stop after each task or phase, matching the current plan instruction.
-- Do not jump to later tasks.
-- Do not redesign completed work unless the active task explicitly requires refactor.
-
-Branch format for plan branches:
-
-```text
-<plan-slug>
-```
-
-Example:
-
-```text
-auth-ui-foundation
-```
-
-Commit format:
-
-```text
-task(<plan-id>.<task-number>): <short task summary>
-```
-
-Example:
-
-```text
-task(auth-ui-foundation.01): add login route shell
-```
-
-## Required Checks
-
-For implementation phases, run when applicable:
+Run only checks applicable to changed code:
 
 ```bash
-npm install
 npm run build
 npm run lint
 ```
 
-If lint is not configured yet, do not invent extra tooling unless the active task asks for it.
+If lint is not configured, do not add lint tooling unless the active task requests it.
 
-## Stop Rule
+## Communication
 
-After a task or phase, report:
+Work silently. Do not send preambles, narration, discoveries, plans, or progress updates.
 
-- Branch
-- Commit
-- Files changed
-- Checks run
-- Blockers
-- Next task
+Speak before completion only when:
+- user input is required
+- approval is required
+- destructive confirmation is required
+- a blocker prevents progress
 
-Do not continue without approval or a fresh `next` instruction.
+## Final Response Style
+
+Final report: exactly six short lines:
+
+```text
+Branch: <branch>
+Commit: <commit-or-none>
+Files: <changed-files-or-none>
+Checks: <checks-or-none>
+Blockers: <blockers-or-none>
+Next: <next-task-or-none>
+```
+
+Use `none` when empty and stop until approval or `next`.
