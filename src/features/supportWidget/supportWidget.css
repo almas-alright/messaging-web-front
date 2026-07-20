@@ -255,6 +255,26 @@
   width: 100%;
 }
 
+.support-widget-conversation__status {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.support-widget-conversation__status .support-widget-connection {
+  flex: 1;
+}
+
+.support-widget-conversation__status button {
+  background: transparent;
+  border: 0;
+  color: var(--support-accent-strong);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 7px 2px;
+}
+
 .support-widget-connection {
   background: var(--support-bg);
   border: 1px solid var(--support-border);

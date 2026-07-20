@@ -5,10 +5,14 @@ import {
 } from "./apiClient";
 import type { SupportWidgetConfig } from "./config";
 import {
+  clearSupportVisitorSession,
+  isSupportVisitorSessionExpired,
+  loadSupportVisitorSession,
   saveSupportVisitorSession,
   type SupportVisitorSession,
 } from "./visitorSessionStorage";
 import {
+  type ConversationMessagesEvent,
   type MessageCreatedEvent,
   type MessagingWebSocket,
   type ServerEvent,
@@ -74,9 +78,31 @@ export function SupportWidget({ config }: SupportWidgetProps) {
     };
   }, [visitorSession?.sessionId]);
 
+  useEffect(() => {
+    if (!visitorSession) return;
+    const expiryTimer = window.setInterval(() => {
+      if (isSupportVisitorSessionExpired(visitorSession)) {
+        resetVisitorSession(
+          "Your support session ended. Start a new conversation.",
+        );
+      }
+    }, 30_000);
+    return () => window.clearInterval(expiryTimer);
+  }, [visitorSession?.sessionId]);
+
   function openWidget() {
     if (openingTimerRef.current !== null) {
       window.clearTimeout(openingTimerRef.current);
+    }
+    if (!visitorSession) {
+      const restoredSession = loadSupportVisitorSession(config.tenantId);
+      if (restoredSession) {
+        setVisitorSession(restoredSession);
+        setStartStatus({
+          state: "success",
+          message: "Your support conversation was restored.",
+        });
+      }
     }
     setState("opening");
     openingTimerRef.current = window.setTimeout(() => {
@@ -91,6 +117,22 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       openingTimerRef.current = null;
     }
     setState("collapsed");
+  }
+
+  function resetVisitorSession(message = "Start a new support conversation.") {
+    const socket = webSocketRef.current;
+    webSocketRef.current = null;
+    socket?.disconnect();
+    clearSupportVisitorSession(config.tenantId);
+    readyUserIdRef.current = null;
+    setVisitorSession(null);
+    setMessages([]);
+    setMessageDraft("");
+    setConnectionStatus({
+      state: "idle",
+      message: "Start a conversation to connect.",
+    });
+    setStartStatus({ state: "idle", message });
   }
 
   async function handleWelcomeSubmit(event: FormEvent<HTMLFormElement>) {
@@ -125,6 +167,10 @@ export function SupportWidget({ config }: SupportWidgetProps) {
   }
 
   function connectVisitorSocket(session: SupportVisitorSession) {
+    if (isSupportVisitorSessionExpired(session)) {
+      resetVisitorSession("Your support session ended. Start a new conversation.");
+      return;
+    }
     webSocketRef.current?.disconnect();
     readyUserIdRef.current = null;
     setConnectionStatus({ state: "connecting", message: "Connecting…" });
@@ -140,6 +186,12 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       onClose: () => {
         if (webSocketRef.current !== socket) return;
         webSocketRef.current = null;
+        if (isSupportVisitorSessionExpired(session)) {
+          resetVisitorSession(
+            "Your support session ended. Start a new conversation.",
+          );
+          return;
+        }
         setConnectionStatus({ state: "disconnected", message: "Disconnected." });
       },
       onError: () =>
@@ -204,7 +256,30 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       return;
     }
 
+    if (
+      isSupportHistoryEvent(event) &&
+      event.conversation_id === session.conversationId &&
+      Array.isArray(event.messages)
+    ) {
+      setMessages((current) =>
+        event.messages.reduce(
+          (next, message) =>
+            isSupportMessageEvent(message)
+              ? upsertSupportMessage(next, message, readyUserIdRef.current)
+              : next,
+          current,
+        ),
+      );
+      return;
+    }
+
     if (event.type === "error") {
+      if (isVisitorSessionAuthError(event)) {
+        resetVisitorSession(
+          "Your support session ended. Start a new conversation.",
+        );
+        return;
+      }
       if (
         "client_message_id" in event &&
         typeof event.client_message_id === "string"
@@ -333,12 +408,17 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       <div className="support-widget-body">
         {visitorSession ? (
           <div className="support-widget-conversation">
-            <p
-              className={`support-widget-connection support-widget-connection--${connectionStatus.state}`}
-              role={connectionStatus.state === "error" ? "alert" : "status"}
-            >
-              {connectionStatus.message}
-            </p>
+            <div className="support-widget-conversation__status">
+              <p
+                className={`support-widget-connection support-widget-connection--${connectionStatus.state}`}
+                role={connectionStatus.state === "error" ? "alert" : "status"}
+              >
+                {connectionStatus.message}
+              </p>
+              <button type="button" onClick={() => resetVisitorSession()}>
+                New conversation
+              </button>
+            </div>
             <div className="support-widget-messages" aria-live="polite">
               {messages.length ? (
                 messages.map((message) => (
@@ -449,6 +529,25 @@ function isSupportMessageEvent(event: ServerEvent): event is MessageCreatedEvent
     typeof event.sender_id === "string" &&
     "body" in event &&
     typeof event.body === "string"
+  );
+}
+
+function isSupportHistoryEvent(
+  event: ServerEvent,
+): event is ConversationMessagesEvent {
+  return (
+    event.type === "conversation.messages" &&
+    "conversation_id" in event &&
+    typeof event.conversation_id === "string" &&
+    "messages" in event &&
+    Array.isArray(event.messages)
+  );
+}
+
+function isVisitorSessionAuthError(event: ServerEvent) {
+  if (event.type !== "error" || !("error" in event)) return false;
+  return /unauthori[sz]ed|invalid token|expired|inactive session/i.test(
+    String(event.error),
   );
 }
 

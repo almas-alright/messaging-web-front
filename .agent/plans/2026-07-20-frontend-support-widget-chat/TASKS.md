@@ -78,11 +78,11 @@ task(frontend-support.04): add visitor widget message flow
 
 ## FE-SUPPORT-05 — Visitor history and resume
 
-- [ ] FE-SUPPORT-05.01 Restore visitor session from local storage when widget opens
-- [ ] FE-SUPPORT-05.02 Load support conversation history where backend contract allows
-- [ ] FE-SUPPORT-05.03 Handle expired/invalid visitor token by returning to welcome state
-- [ ] FE-SUPPORT-05.04 Add “start new conversation” reset action
-- [ ] FE-SUPPORT-05.05 Keep visitor session isolated from normal authenticated user session
+- [x] FE-SUPPORT-05.01 Restore visitor session from local storage when widget opens
+- [x] FE-SUPPORT-05.02 Load support conversation history where backend contract allows
+- [x] FE-SUPPORT-05.03 Handle expired/invalid visitor token by returning to welcome state
+- [x] FE-SUPPORT-05.04 Add “start new conversation” reset action
+- [x] FE-SUPPORT-05.05 Keep visitor session isolated from normal authenticated user session
 
 Commit:
 

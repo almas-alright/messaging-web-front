@@ -15,6 +15,9 @@ export {
   type SupportApiClient,
 } from "./apiClient";
 export {
+  clearSupportVisitorSession,
+  isSupportVisitorSessionExpired,
+  loadSupportVisitorSession,
   saveSupportVisitorSession,
   type SupportVisitorSession,
 } from "./visitorSessionStorage";
