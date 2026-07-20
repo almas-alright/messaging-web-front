@@ -4,11 +4,11 @@ Working branch: `frontend-support-widget-chat`
 
 ## FE-SUPPORT-01 — Support widget boundary and config
 
-- [ ] FE-SUPPORT-01.01 Inspect current frontend structure and standalone chat client modules
-- [ ] FE-SUPPORT-01.02 Add support widget config module
-- [ ] FE-SUPPORT-01.03 Add env placeholders for widget tenant, API base URL, WS URL, brand name, and theme
-- [ ] FE-SUPPORT-01.04 Keep widget code isolated from standalone chat page while reusing shared API/token/WebSocket utilities
-- [ ] FE-SUPPORT-01.05 Update `.agent/state/HANDOFF.md`
+- [x] FE-SUPPORT-01.01 Inspect current frontend structure and standalone chat client modules
+- [x] FE-SUPPORT-01.02 Add support widget config module
+- [x] FE-SUPPORT-01.03 Add env placeholders for widget tenant, API base URL, WS URL, brand name, and theme
+- [x] FE-SUPPORT-01.04 Keep widget code isolated from standalone chat page while reusing shared API/token/WebSocket utilities
+- [x] FE-SUPPORT-01.05 Update `.agent/state/HANDOFF.md`
 
 Expected env:
 
