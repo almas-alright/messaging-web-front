@@ -15,10 +15,35 @@ export type StartSupportSessionResponse = {
   expires_at: string;
 };
 
+export type SendSupportEmailCodeRequest = {
+  email: string;
+};
+
+export type SendSupportEmailCodeResponse = {
+  message: string;
+};
+
+export type VerifySupportEmailCodeRequest = {
+  email: string;
+  code: string;
+};
+
+export type VerifySupportEmailCodeResponse = {
+  verified: boolean;
+};
+
 export type SupportApiClient = {
   startSession: (
     request: StartSupportSessionRequest,
   ) => Promise<StartSupportSessionResponse>;
+  sendEmailCode: (
+    request: SendSupportEmailCodeRequest,
+    visitorToken: string,
+  ) => Promise<SendSupportEmailCodeResponse>;
+  verifyEmailCode: (
+    request: VerifySupportEmailCodeRequest,
+    visitorToken: string,
+  ) => Promise<VerifySupportEmailCodeResponse>;
 };
 
 export class SupportApiError extends Error {
@@ -41,15 +66,40 @@ export function createSupportApiClient(
         "/support/sessions/start",
         request,
       ),
+    sendEmailCode: (request, visitorToken) =>
+      requestJson<SendSupportEmailCodeResponse>(
+        config.apiBaseUrl,
+        "/support/email/send-code",
+        request,
+        visitorToken,
+      ),
+    verifyEmailCode: (request, visitorToken) =>
+      requestJson<VerifySupportEmailCodeResponse>(
+        config.apiBaseUrl,
+        "/support/email/verify-code",
+        request,
+        visitorToken,
+      ),
   };
 }
 
-async function requestJson<T>(apiBaseUrl: string, path: string, body: unknown) {
+async function requestJson<T>(
+  apiBaseUrl: string,
+  path: string,
+  body: unknown,
+  accessToken?: string,
+) {
   let response: Response;
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (accessToken?.trim()) {
+      headers.Authorization = `Bearer ${accessToken.trim()}`;
+    }
     response = await fetch(`${apiBaseUrl}${path}`, {
       body: JSON.stringify(body),
-      headers: { "Content-Type": "application/json" },
+      headers,
       method: "POST",
     });
   } catch {

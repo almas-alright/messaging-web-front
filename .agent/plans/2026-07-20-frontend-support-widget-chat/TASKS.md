@@ -94,11 +94,11 @@ task(frontend-support.05): add visitor session resume
 
 ## FE-SUPPORT-06 — Email verification UI
 
-- [ ] FE-SUPPORT-06.01 Add support API client for `POST /support/email/send-code`
-- [ ] FE-SUPPORT-06.02 Add support API client for `POST /support/email/verify-code`
-- [ ] FE-SUPPORT-06.03 Add “verify email” UI inside widget
-- [ ] FE-SUPPORT-06.04 Show neutral send-code response
-- [ ] FE-SUPPORT-06.05 Show verified/claim-pending/failed states safely
+- [x] FE-SUPPORT-06.01 Add support API client for `POST /support/email/send-code`
+- [x] FE-SUPPORT-06.02 Add support API client for `POST /support/email/verify-code`
+- [x] FE-SUPPORT-06.03 Add “verify email” UI inside widget
+- [x] FE-SUPPORT-06.04 Show neutral send-code response
+- [x] FE-SUPPORT-06.05 Show verified/claim-pending/failed states safely
 
 Commit:
 

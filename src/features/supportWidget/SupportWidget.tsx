@@ -39,6 +39,14 @@ type SupportMessage = {
   createdAt: string;
 };
 
+type VerificationState =
+  | "idle"
+  | "sending"
+  | "claim-pending"
+  | "verifying"
+  | "verified"
+  | "failed";
+
 export function SupportWidget({ config }: SupportWidgetProps) {
   const [state, setState] = useState<SupportWidgetState>("collapsed");
   const [email, setEmail] = useState("");
@@ -53,6 +61,12 @@ export function SupportWidget({ config }: SupportWidgetProps) {
   const readyUserIdRef = useRef<string | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [messageDraft, setMessageDraft] = useState("");
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationStatus, setVerificationStatus] = useState<{
+    state: VerificationState;
+    message: string;
+  }>({ state: "idle", message: "" });
   const [connectionStatus, setConnectionStatus] = useState<{
     state: "idle" | "connecting" | "joined" | "disconnected" | "error";
     message: string;
@@ -128,6 +142,9 @@ export function SupportWidget({ config }: SupportWidgetProps) {
     setVisitorSession(null);
     setMessages([]);
     setMessageDraft("");
+    setVerificationEmail("");
+    setVerificationCode("");
+    setVerificationStatus({ state: "idle", message: "" });
     setConnectionStatus({
       state: "idle",
       message: "Start a conversation to connect.",
@@ -153,6 +170,7 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       });
       const session = saveSupportVisitorSession(config.tenantId, response);
       setVisitorSession(session);
+      setVerificationEmail(email.trim());
       setEmail("");
       setStartStatus({
         state: "success",
@@ -162,6 +180,83 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       setStartStatus({
         state: "error",
         message: friendlyStartError(error),
+      });
+    }
+  }
+
+  async function handleSendVerificationCode(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    if (!visitorSession || !verificationEmail.trim()) return;
+
+    setVerificationStatus({
+      state: "sending",
+      message: "Requesting a verification code…",
+    });
+    try {
+      await createSupportApiClient(config).sendEmailCode(
+        { email: verificationEmail.trim() },
+        visitorSession.accessToken,
+      );
+      setVerificationStatus({
+        state: "claim-pending",
+        message:
+          "If this email can receive messages, a verification code has been sent.",
+      });
+    } catch (error) {
+      if (error instanceof SupportApiError && error.status === 401) {
+        resetVisitorSession(
+          "Your support session ended. Start a new conversation.",
+        );
+        return;
+      }
+      setVerificationStatus({
+        state: "failed",
+        message: friendlyVerificationError(error, "send"),
+      });
+    }
+  }
+
+  async function handleVerifyEmailCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (
+      !visitorSession ||
+      !verificationEmail.trim() ||
+      !/^\d{6}$/.test(verificationCode.trim())
+    ) {
+      setVerificationStatus({
+        state: "failed",
+        message: "Enter the six-digit code and try again.",
+      });
+      return;
+    }
+
+    setVerificationStatus({
+      state: "verifying",
+      message: "Verifying your email…",
+    });
+    try {
+      const response = await createSupportApiClient(config).verifyEmailCode(
+        {
+          email: verificationEmail.trim(),
+          code: verificationCode.trim(),
+        },
+        visitorSession.accessToken,
+      );
+      if (!response.verified) {
+        throw new SupportApiError("Email verification failed", 400);
+      }
+      setVerificationCode("");
+      setVerificationStatus({
+        state: "verified",
+        message:
+          "Email verified. Any eligible account connection is handled privately.",
+      });
+    } catch (error) {
+      setVerificationStatus({
+        state: "failed",
+        message: friendlyVerificationError(error, "verify"),
       });
     }
   }
@@ -419,6 +514,92 @@ export function SupportWidget({ config }: SupportWidgetProps) {
                 New conversation
               </button>
             </div>
+            <section
+              className={`support-widget-verification support-widget-verification--${verificationStatus.state}`}
+              aria-label="Verify email"
+            >
+              {verificationStatus.state === "verified" ? (
+                <p role="status">{verificationStatus.message}</p>
+              ) : (
+                <>
+                  <strong>Verify your email</strong>
+                  <form onSubmit={handleSendVerificationCode}>
+                    <input
+                      type="email"
+                      aria-label="Email to verify"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      required
+                      value={verificationEmail}
+                      onChange={(event) =>
+                        setVerificationEmail(event.target.value)
+                      }
+                      disabled={
+                        verificationStatus.state === "sending" ||
+                        verificationStatus.state === "verifying"
+                      }
+                    />
+                    <button
+                      type="submit"
+                      disabled={
+                        !verificationEmail.trim() ||
+                        verificationStatus.state === "sending" ||
+                        verificationStatus.state === "verifying"
+                      }
+                    >
+                      {verificationStatus.state === "sending"
+                        ? "Sending…"
+                        : "Send code"}
+                    </button>
+                  </form>
+                  {verificationStatus.state === "claim-pending" ||
+                  verificationStatus.state === "verifying" ||
+                  verificationStatus.state === "failed" ? (
+                    <form onSubmit={handleVerifyEmailCode}>
+                      <input
+                        type="text"
+                        aria-label="Six-digit verification code"
+                        autoComplete="one-time-code"
+                        inputMode="numeric"
+                        maxLength={6}
+                        pattern="[0-9]{6}"
+                        placeholder="6-digit code"
+                        required
+                        value={verificationCode}
+                        onChange={(event) =>
+                          setVerificationCode(
+                            event.target.value.replace(/\D/g, "").slice(0, 6),
+                          )
+                        }
+                        disabled={verificationStatus.state === "verifying"}
+                      />
+                      <button
+                        type="submit"
+                        disabled={
+                          verificationCode.length !== 6 ||
+                          verificationStatus.state === "verifying"
+                        }
+                      >
+                        {verificationStatus.state === "verifying"
+                          ? "Verifying…"
+                          : "Verify"}
+                      </button>
+                    </form>
+                  ) : null}
+                  {verificationStatus.message ? (
+                    <p
+                      role={
+                        verificationStatus.state === "failed"
+                          ? "alert"
+                          : "status"
+                      }
+                    >
+                      {verificationStatus.message}
+                    </p>
+                  ) : null}
+                </>
+              )}
+            </section>
             <div className="support-widget-messages" aria-live="polite">
               {messages.length ? (
                 messages.map((message) => (
@@ -516,6 +697,26 @@ function friendlyStartError(error: unknown) {
     return error.message;
   }
   return "Support is temporarily unavailable. Please try again.";
+}
+
+function friendlyVerificationError(
+  error: unknown,
+  action: "send" | "verify",
+) {
+  if (error instanceof SupportApiError) {
+    if (action === "verify" && error.status === 401) {
+      return "The code is invalid or expired. Request a new code and try again.";
+    }
+    if (error.status === 400 || error.status === 422) {
+      return "Check the email and code, then try again.";
+    }
+    if (error.status === 429) {
+      return "Please wait a moment before trying again.";
+    }
+  }
+  return action === "send"
+    ? "A verification code could not be sent right now. Please try again."
+    : "The email could not be verified. Please try again.";
 }
 
 function isSupportMessageEvent(event: ServerEvent): event is MessageCreatedEvent {

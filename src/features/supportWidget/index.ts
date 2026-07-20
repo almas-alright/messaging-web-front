@@ -10,9 +10,13 @@ export { SupportWidgetDemoPage } from "./SupportWidgetDemoPage";
 export {
   createSupportApiClient,
   SupportApiError,
+  type SendSupportEmailCodeRequest,
+  type SendSupportEmailCodeResponse,
   type StartSupportSessionRequest,
   type StartSupportSessionResponse,
   type SupportApiClient,
+  type VerifySupportEmailCodeRequest,
+  type VerifySupportEmailCodeResponse,
 } from "./apiClient";
 export {
   clearSupportVisitorSession,
