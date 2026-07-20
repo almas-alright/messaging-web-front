@@ -3,6 +3,7 @@ export {
   loadSupportWidgetConfig,
   supportWidgetClientConfig,
   type SupportWidgetConfig,
+  type SupportWidgetEmbedConfig,
   type SupportWidgetTheme,
 } from "./config";
 export { SupportWidget, type SupportWidgetState } from "./SupportWidget";

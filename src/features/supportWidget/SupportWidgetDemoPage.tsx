@@ -4,6 +4,17 @@ import {
 } from "./config";
 import { SupportWidget } from "./SupportWidget";
 
+const embedExample = `<div id="messaging-support-widget"></div>
+<script>
+  window.MessagingSupportWidgetConfig = {
+    tenantId: "demo-tenant",
+    apiBaseUrl: "http://localhost:8080",
+    wsUrl: "ws://localhost:8080/ws",
+    brandName: "Support",
+    theme: "light"
+  };
+</script>`;
+
 export function SupportWidgetDemoPage() {
   const config = loadSupportWidgetConfig();
   const isConfigured = isSupportWidgetConfigured(config);
@@ -29,6 +40,24 @@ export function SupportWidgetDemoPage() {
               : "Set VITE_SUPPORT_WIDGET_TENANT_ID to enable backend flows."}
           </span>
         </div>
+        <section className="support-widget-demo__embed" aria-labelledby="embed-title">
+          <div>
+            <p>Host initialization</p>
+            <h2 id="embed-title">Public config only</h2>
+            <span>
+              Define this object before loading the frontend bundle. Visitor
+              tokens are issued at runtime and never belong in host config.
+            </span>
+          </div>
+          <pre tabIndex={0}>
+            <code>{embedExample}</code>
+          </pre>
+          <small>
+            Allowed fields: tenant id, API URL, WebSocket URL, brand name, and
+            theme. Do not include access tokens, signing keys, or backend
+            secrets.
+          </small>
+        </section>
       </section>
       <SupportWidget config={config} />
     </main>

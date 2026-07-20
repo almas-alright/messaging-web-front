@@ -150,10 +150,10 @@ task(frontend-support.08): add support agent reply flow
 
 ## FE-SUPPORT-09 — Widget embed demo
 
-- [ ] FE-SUPPORT-09.01 Add local embed demo page/documentation
-- [ ] FE-SUPPORT-09.02 Show how a host site would initialize the widget config
-- [ ] FE-SUPPORT-09.03 Keep secrets out of embed config
-- [ ] FE-SUPPORT-09.04 Document required public config only: tenant id, API URL, WS URL, brand/theme
+- [x] FE-SUPPORT-09.01 Add local embed demo page/documentation
+- [x] FE-SUPPORT-09.02 Show how a host site would initialize the widget config
+- [x] FE-SUPPORT-09.03 Keep secrets out of embed config
+- [x] FE-SUPPORT-09.04 Document required public config only: tenant id, API URL, WS URL, brand/theme
 
 Example embed idea:
 
