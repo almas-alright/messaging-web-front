@@ -130,11 +130,15 @@ task(frontend-support.07): add support agent inbox
 
 ## FE-SUPPORT-08 — Agent reply flow
 
-- [ ] FE-SUPPORT-08.01 Connect agent WebSocket using authenticated messaging access token
-- [ ] FE-SUPPORT-08.02 Join selected support conversation
-- [ ] FE-SUPPORT-08.03 Send agent replies
-- [ ] FE-SUPPORT-08.04 Render replies in both agent inbox and visitor widget
-- [ ] FE-SUPPORT-08.05 Preserve permission/error handling from standalone chat
+- [-] FE-SUPPORT-08.01 Blocked: the backend defines no support-agent credential or WebSocket identity
+- [-] FE-SUPPORT-08.02 Blocked: no support conversation assignment grants agent join permission
+- [-] FE-SUPPORT-08.03 Blocked: agent send permission for support conversations is undefined
+- [-] FE-SUPPORT-08.04 Blocked: the agent inbox and dedicated visitor WebSocket are unavailable
+- [x] FE-SUPPORT-08.05 Existing standalone permission boundaries were preserved; no support-agent access was fabricated
+
+Blocker: support-agent authentication, assignment, read/send authorization, and
+the dedicated visitor realtime endpoint are not implemented by the backend.
+Implement those contracts before adding agent replies.
 
 Commit:
 
