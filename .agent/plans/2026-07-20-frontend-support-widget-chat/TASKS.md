@@ -1,0 +1,208 @@
+# Frontend Support Widget Chat Tasks
+
+Working branch: `frontend-support-widget-chat`
+
+## FE-SUPPORT-01 — Support widget boundary and config
+
+- [x] FE-SUPPORT-01.01 Inspect current frontend structure and standalone chat client modules
+- [x] FE-SUPPORT-01.02 Add support widget config module
+- [x] FE-SUPPORT-01.03 Add env placeholders for widget tenant, API base URL, WS URL, brand name, and theme
+- [x] FE-SUPPORT-01.04 Keep widget code isolated from standalone chat page while reusing shared API/token/WebSocket utilities
+- [x] FE-SUPPORT-01.05 Update `.agent/state/HANDOFF.md`
+
+Expected env:
+
+```env
+VITE_MESSAGING_API_BASE_URL=http://localhost:8080
+VITE_MESSAGING_WS_URL=ws://localhost:8080/ws
+VITE_SUPPORT_WIDGET_TENANT_ID=demo-tenant
+VITE_SUPPORT_WIDGET_BRAND_NAME=Support
+VITE_SUPPORT_WIDGET_THEME=light
+```
+
+Commit:
+
+```text
+task(frontend-support.01): add support widget config boundary
+```
+
+---
+
+## FE-SUPPORT-02 — Floating widget shell
+
+- [x] FE-SUPPORT-02.01 Add floating support launcher component
+- [x] FE-SUPPORT-02.02 Add collapsed, opening, open, minimized states
+- [x] FE-SUPPORT-02.03 Add widget panel layout with header/body/footer
+- [x] FE-SUPPORT-02.04 Make widget responsive for desktop and mobile
+- [x] FE-SUPPORT-02.05 Add local demo route/page for testing widget inside the app
+
+Commit:
+
+```text
+task(frontend-support.02): add floating support widget shell
+```
+
+---
+
+## FE-SUPPORT-03 — Visitor session start flow
+
+- [x] FE-SUPPORT-03.01 Add support API client for `POST /support/sessions/start`
+- [x] FE-SUPPORT-03.02 Add visitor welcome form with name/email/message fields where backend contract allows
+- [x] FE-SUPPORT-03.03 Start visitor support session and store visitor token/conversation id
+- [x] FE-SUPPORT-03.04 Scope stored visitor session by tenant id
+- [x] FE-SUPPORT-03.05 Show neutral success/error states without revealing account existence
+
+Commit:
+
+```text
+task(frontend-support.03): add visitor support session start
+```
+
+---
+
+## FE-SUPPORT-04 — Visitor widget message flow
+
+- [x] FE-SUPPORT-04.01 Connect widget WebSocket using visitor token
+- [x] FE-SUPPORT-04.02 Join visitor support conversation after `connection.ready`
+- [x] FE-SUPPORT-04.03 Render visitor and agent messages in widget panel
+- [x] FE-SUPPORT-04.04 Send visitor text message
+- [x] FE-SUPPORT-04.05 Show sending/sent/failed state without false success
+
+Commit:
+
+```text
+task(frontend-support.04): add visitor widget message flow
+```
+
+---
+
+## FE-SUPPORT-05 — Visitor history and resume
+
+- [x] FE-SUPPORT-05.01 Restore visitor session from local storage when widget opens
+- [x] FE-SUPPORT-05.02 Load support conversation history where backend contract allows
+- [x] FE-SUPPORT-05.03 Handle expired/invalid visitor token by returning to welcome state
+- [x] FE-SUPPORT-05.04 Add “start new conversation” reset action
+- [x] FE-SUPPORT-05.05 Keep visitor session isolated from normal authenticated user session
+
+Commit:
+
+```text
+task(frontend-support.05): add visitor session resume
+```
+
+---
+
+## FE-SUPPORT-06 — Email verification UI
+
+- [x] FE-SUPPORT-06.01 Add support API client for `POST /support/email/send-code`
+- [x] FE-SUPPORT-06.02 Add support API client for `POST /support/email/verify-code`
+- [x] FE-SUPPORT-06.03 Add “verify email” UI inside widget
+- [x] FE-SUPPORT-06.04 Show neutral send-code response
+- [x] FE-SUPPORT-06.05 Show verified/claim-pending/failed states safely
+
+Commit:
+
+```text
+task(frontend-support.06): add support email verification ui
+```
+
+---
+
+## FE-SUPPORT-07 — Support agent inbox
+
+- [-] FE-SUPPORT-07.01 Blocked: authenticated support-agent access is not implemented by the backend
+- [-] FE-SUPPORT-07.02 Blocked: no support inbox/list filter exists in the backend API
+- [-] FE-SUPPORT-07.03 Blocked: support conversation assignment and agent read permission are undefined
+- [-] FE-SUPPORT-07.04 Blocked: the backend exposes no agent-safe visitor identity projection
+- [x] FE-SUPPORT-07.05 Backend gap recorded; no fake frontend API or inbox was added
+
+Blocker: the backend router has no support-agent credential, assignment policy,
+or tenant-scoped support conversation list endpoint. Implement those contracts
+before adding an agent inbox.
+
+Commit:
+
+```text
+task(frontend-support.07): add support agent inbox
+```
+
+---
+
+## FE-SUPPORT-08 — Agent reply flow
+
+- [-] FE-SUPPORT-08.01 Blocked: the backend defines no support-agent credential or WebSocket identity
+- [-] FE-SUPPORT-08.02 Blocked: no support conversation assignment grants agent join permission
+- [-] FE-SUPPORT-08.03 Blocked: agent send permission for support conversations is undefined
+- [-] FE-SUPPORT-08.04 Blocked: the agent inbox and dedicated visitor WebSocket are unavailable
+- [x] FE-SUPPORT-08.05 Existing standalone permission boundaries were preserved; no support-agent access was fabricated
+
+Blocker: support-agent authentication, assignment, read/send authorization, and
+the dedicated visitor realtime endpoint are not implemented by the backend.
+Implement those contracts before adding agent replies.
+
+Commit:
+
+```text
+task(frontend-support.08): add support agent reply flow
+```
+
+---
+
+## FE-SUPPORT-09 — Widget embed demo
+
+- [x] FE-SUPPORT-09.01 Add local embed demo page/documentation
+- [x] FE-SUPPORT-09.02 Show how a host site would initialize the widget config
+- [x] FE-SUPPORT-09.03 Keep secrets out of embed config
+- [x] FE-SUPPORT-09.04 Document required public config only: tenant id, API URL, WS URL, brand/theme
+
+Example embed idea:
+
+```html
+<div id="messaging-support-widget"></div>
+<script>
+  window.MessagingSupportWidgetConfig = {
+    tenantId: "demo-tenant",
+    apiBaseUrl: "http://localhost:8080",
+    wsUrl: "ws://localhost:8080/ws",
+    brandName: "Support"
+  }
+</script>
+```
+
+Commit:
+
+```text
+task(frontend-support.09): add support widget embed demo
+```
+
+---
+
+## FE-SUPPORT-10 — Polish, accessibility, and responsive states
+
+- [x] FE-SUPPORT-10.01 Add keyboard accessible open/close behavior
+- [x] FE-SUPPORT-10.02 Add focus management for widget panel
+- [x] FE-SUPPORT-10.03 Add empty/loading/error states
+- [x] FE-SUPPORT-10.04 Add mobile full-height panel behavior
+- [x] FE-SUPPORT-10.05 Keep visual style consistent with current frontend
+
+Commit:
+
+```text
+task(frontend-support.10): polish support widget ux
+```
+
+---
+
+## FE-SUPPORT-11 — Documentation and final checks
+
+- [x] FE-SUPPORT-11.01 Update README with support widget run/demo instructions
+- [x] FE-SUPPORT-11.02 Add manual test checklist: visitor browser + agent browser
+- [x] FE-SUPPORT-11.03 Run `npm run build`
+- [x] FE-SUPPORT-11.04 Confirm `npm run lint` is not configured
+- [x] FE-SUPPORT-11.05 Record final result in `.agent/state/HANDOFF.md`
+
+Commit:
+
+```text
+task(frontend-support.11): document support widget chat
+```

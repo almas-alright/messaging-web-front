@@ -1,10 +1,10 @@
 # Handoff
 
-Plan: frontend-standalone-chat-alignment
-Branch: frontend-standalone-chat-alignment
-Task: FE-CHAT-11 — Final docs and verification
-Commit: task(frontend-chat.11): document standalone chat alignment
-Files changed: README.md, docs/local-test-checklist.md, .env.example, .agent/plans/2026-07-19-frontend-standalone-chat-alignment/TASKS.md, .agent/state/HANDOFF.md
-Checks run: npm run build; lint not configured
-Blockers: none
+Plan: frontend-support-widget-chat
+Branch: frontend-support-widget-chat
+Task: FE-SUPPORT-11 — Documentation and final checks
+Commit: task(frontend-support.11): document support widget chat
+Files changed: README.md, docs/support-widget-test-checklist.md, .agent/plans/2026-07-20-frontend-support-widget-chat/TASKS.md, .agent/state/HANDOFF.md
+Checks run: npm run build; npm run lint not configured
+Blockers: Backend still needs dedicated visitor WebSocket plus support-agent authentication, assignment, inbox, and reply contracts.
 Next task: none

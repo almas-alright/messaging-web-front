@@ -1,9 +1,9 @@
 # Current Agent Plan
 
 ```yaml
-active_plan: .agent/plans/2026-07-19-frontend-standalone-chat-alignment
-active_branch: frontend-standalone-chat-alignment
-active_phase: FE-CHAT-01
+active_plan: .agent/plans/2026-07-20-frontend-support-widget-chat
+active_branch: frontend-support-widget-chat
+active_phase: FE-SUPPORT-01
 active_task: next unchecked
 mode: one-plan-branch-one-task-commit-stop
 ```
@@ -12,7 +12,7 @@ mode: one-plan-branch-one-task-commit-stop
 
 1. `AGENTS.md`
 2. `.agent/CURRENT_PLAN.md`
-3. `.agent/plans/2026-07-19-frontend-standalone-chat-alignment/TASKS.md`
+3. `.agent/plans/2026-07-20-frontend-support-widget-chat/TASKS.md`
 
 Read other files only when the current task requires them.
 
