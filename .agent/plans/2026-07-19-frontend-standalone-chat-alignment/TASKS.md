@@ -178,11 +178,11 @@ task(frontend-chat.10): align attachment flow with auth
 
 ## FE-CHAT-11 — Final docs and verification
 
-- [ ] FE-CHAT-11.01 Update README run guide for backend auth flow
-- [ ] FE-CHAT-11.02 Add local test checklist for two-browser chat
-- [ ] FE-CHAT-11.03 Run `npm run build`
-- [ ] FE-CHAT-11.04 Run `npm run lint` if configured
-- [ ] FE-CHAT-11.05 Record final handoff
+- [x] FE-CHAT-11.01 Update README run guide for backend auth flow
+- [x] FE-CHAT-11.02 Add local test checklist for two-browser chat
+- [x] FE-CHAT-11.03 Run `npm run build`
+- [x] FE-CHAT-11.04 Run `npm run lint` if configured
+- [x] FE-CHAT-11.05 Record final handoff
 
 Commit:
 

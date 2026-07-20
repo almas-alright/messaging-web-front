@@ -14,13 +14,14 @@ https://github.com/almas-alright/messaging-service
 
 Build a simple WhatsApp-like chat UI that can run on your Ubuntu PC and connect to the local messaging backend through configurable URLs.
 
-Initial local demo:
+Standalone local chat:
 
 - Vite + React + TypeScript
 - Configurable backend API base URL
 - Configurable WebSocket URL
-- Manual JWT paste for local demo
-- Buyer/seller chat UI
+- Email/password registration and login through the messaging backend
+- Messaging access/refresh token session lifecycle
+- Authenticated contacts and one-to-one conversations
 - Message list
 - Emoji support
 - File upload/send
@@ -36,10 +37,9 @@ Future direction:
 - Optional AI bot per chat side
 - Human takeover from AI bot
 
-## Not In First Demo
+## Not In This Frontend
 
 - Full marketplace frontend
-- Production auth login
 - AI bot implementation
 - Voice messages
 - tawk.to-style embed script
@@ -82,6 +82,10 @@ The app defaults to:
 VITE_API_BASE_URL=http://localhost:8080
 VITE_WS_BASE_URL=ws://localhost:8080/ws
 ```
+
+Google and GitHub buttons remain provider hooks until their public client IDs
+and browser authorization adapters are configured. Client secrets must never be
+added to frontend environment files.
 
 For LAN testing, create a local `.env.local` file:
 
@@ -141,9 +145,6 @@ VITE_API_BASE_URL=http://<host-ip>:8080
 VITE_WS_BASE_URL=ws://<host-ip>:8080/ws
 ```
 
-You can also update these values from the frontend settings panel. The settings
-panel stores overrides in browser localStorage for demo testing.
-
 4. Start the frontend dev server:
 
 ```bash
@@ -163,27 +164,22 @@ Open from another device on the same network:
 http://<host-ip>:5173
 ```
 
-5. Demo auth and chat flow:
+5. Authenticated chat flow:
 
-- Paste a manually generated JWT.
-- Run `Check current user`.
-- Connect the WebSocket.
-- Join a conversation such as `conv-001`.
-- Load history.
-- Send text, emoji, and file messages.
+- Register two accounts in separate browser sessions, or sign in to two existing accounts.
+- Search for the other user by email or username and add them as a contact.
+- Select the contact to resolve the direct conversation and connect live chat.
+- Confirm message history loads, then send text and file messages.
+- Confirm delivered/seen receipts update in both browser sessions.
 
-For file messages, upload the selected file first, then send the message after
-the attachment ID appears.
+The main app is served at `/`. The legacy developer demo remains available at
+`/demo` for reference only.
 
 Make sure firewall rules allow inbound traffic to ports `5173` and `8080` on
 the Ubuntu PC during local testing.
 
 For a repeatable walkthrough, use
 [docs/local-test-checklist.md](docs/local-test-checklist.md).
-
-Glass Chat V2 is available as a separate page at `/glass-chat` while the
-current demo UI remains at `/`. To run it with the backend V2 branch, see
-[docs/v2/GLASS_CHAT_V2_RUN_GUIDE.md](docs/v2/GLASS_CHAT_V2_RUN_GUIDE.md).
 
 For frontend/backend ownership details, see
 [docs/config-boundary.md](docs/config-boundary.md).
@@ -224,9 +220,7 @@ FRONTEND_PORT=5173 \
 docker compose up --build
 ```
 
-Vite embeds these values during the Docker image build. You can still override
-API and WebSocket URLs from the app settings panel in the browser during demo
-testing.
+Vite embeds these values during the Docker image build.
 
 ## Backend CORS Requirement
 
@@ -246,15 +240,13 @@ Start from:
 
 ```text
 AGENTS.md
-CODEX.md
-.workflows/phase-plan.md
-.workflows/task-checklist.md
+.agent/CURRENT_PLAN.md
+<active-plan>/TASKS.md
 ```
 
 Rules:
 
-- One phase = one branch
+- One plan = one branch
 - One task = one commit
-- Stop after each phase
-- Do not implement all phases together
+- Stop after each task
 - Keep this repository frontend-only
