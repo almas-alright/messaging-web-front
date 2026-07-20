@@ -76,11 +76,11 @@ task(frontend-chat.04): add email password auth screens
 
 ## FE-CHAT-05 — Google/GitHub login UI hooks
 
-- [ ] FE-CHAT-05.01 Add Google login button placeholder flow
-- [ ] FE-CHAT-05.02 Add GitHub login button placeholder flow
-- [ ] FE-CHAT-05.03 Wire frontend calls to backend provider endpoints where existing backend contract allows
-- [ ] FE-CHAT-05.04 Show clear “provider not configured” state if env/provider is missing
-- [ ] FE-CHAT-05.05 Do not hardcode provider secrets
+- [x] FE-CHAT-05.01 Add Google login button placeholder flow
+- [x] FE-CHAT-05.02 Add GitHub login button placeholder flow
+- [x] FE-CHAT-05.03 Wire frontend calls to backend provider endpoints where existing backend contract allows
+- [x] FE-CHAT-05.04 Show clear “provider not configured” state if env/provider is missing
+- [x] FE-CHAT-05.05 Do not hardcode provider secrets
 
 Backend endpoints:
 
