@@ -10,6 +10,8 @@ import {
 } from "../../api/v2Client";
 import {
   createHttpClient,
+  HttpApiError,
+  type AttachmentResponse,
   type ConversationMessageResponse,
 } from "../../api/httpClient";
 import {
@@ -36,6 +38,8 @@ type GlassMessage = {
   conversationId: string;
   senderId: string;
   body: string;
+  messageType: "text" | "file" | "system";
+  attachmentId?: string;
   createdAt: string;
   policyStatus: "clean" | "flagged" | "blocked";
   receiptStatus?: "sending" | "sent" | "delivered" | "seen";
@@ -50,6 +54,7 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
   const authReconnectAttemptsRef = useRef(0);
   const authRefreshInFlightRef = useRef(false);
+  const attachmentLoadsRef = useRef<Set<string>>(new Set());
   const activeUser = {
     id: currentUser.user_id,
     email: currentUser.email ?? "",
@@ -72,6 +77,16 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     label: string;
   }>({ state: "idle", label: "" });
   const [messageDraft, setMessageDraft] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [pendingAttachment, setPendingAttachment] =
+    useState<AttachmentResponse | null>(null);
+  const [attachmentsById, setAttachmentsById] = useState<
+    Record<string, AttachmentResponse>
+  >({});
+  const [attachmentStatus, setAttachmentStatus] = useState<{
+    state: "idle" | "uploading" | "error";
+    label: string;
+  }>({ state: "idle", label: "" });
   const [socketStatus, setSocketStatus] = useState<{
     state: "idle" | "connecting" | "connected" | "joined" | "error";
     label: string;
@@ -148,6 +163,11 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
       setHistoryStatus({
         state: "loaded",
         label: "",
+      });
+      history.forEach((message) => {
+        if (message.attachmentId) {
+          void loadAttachmentMetadata(message.attachmentId);
+        }
       });
       history.forEach((message) => void markContactMessageSeen(message));
     } catch (error) {
@@ -247,6 +267,9 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     setHistoryStatus({ state: "idle", label: "" });
     seenMessageIdsRef.current = new Set();
     setMessageDraft("");
+    setSelectedFile(null);
+    setPendingAttachment(null);
+    setAttachmentStatus({ state: "idle", label: "" });
     disconnectGlassSocket();
     setConversationStatus({
       state: "resolving",
@@ -400,6 +423,9 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     if (isMessageCreatedEvent(event) && event.conversation_id === conversationId) {
       const nextMessage = messageFromEvent(event, activeUser.id);
       setMessages((current) => upsertMessageFromServer(current, nextMessage));
+      if (nextMessage.attachmentId) {
+        void loadAttachmentMetadata(nextMessage.attachmentId);
+      }
       void markContactMessageSeen(nextMessage);
       setSocketStatus({ state: "joined", label: "Live chat connected." });
       return;
@@ -426,8 +452,12 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     }
   }
 
-  function handleMessageSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleMessageSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (selectedFile || pendingAttachment) {
+      await sendAttachmentMessage();
+      return;
+    }
     const body = messageDraft.trim();
     if (!activeConversation || !body) {
       return;
@@ -443,6 +473,7 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
       createdAt: new Date().toISOString(),
       policyStatus: "clean",
       receiptStatus: "sending",
+      messageType: "text",
     };
 
     try {
@@ -467,6 +498,94 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
       setMessages((current) =>
         current.filter((message) => message.id !== optimisticMessage.id),
       );
+    }
+  }
+
+  function handleSelectedFile(file: File | null) {
+    setSelectedFile(file);
+    setPendingAttachment(null);
+    setAttachmentStatus({ state: "idle", label: file ? file.name : "" });
+  }
+
+  async function sendAttachmentMessage() {
+    if (!activeConversation || (!selectedFile && !pendingAttachment)) return;
+    const jwtToken = loadStoredAccessToken().trim();
+    const socket = webSocketRef.current;
+    if (!jwtToken || !socket) {
+      setAttachmentStatus({
+        state: "error",
+        label: "Connect to the conversation before sending a file.",
+      });
+      return;
+    }
+
+    setAttachmentStatus({ state: "uploading", label: "Uploading file..." });
+    let attachment = pendingAttachment;
+    try {
+      if (!attachment) {
+        if (!selectedFile) return;
+        const uploadedAttachment = await httpClient.uploadAttachment(
+          jwtToken,
+          activeConversation.conversation_id,
+          selectedFile,
+        );
+        attachment = uploadedAttachment;
+        setPendingAttachment(uploadedAttachment);
+        setAttachmentsById((current) => ({
+          ...current,
+          [uploadedAttachment.id]: uploadedAttachment,
+        }));
+      }
+      const readyAttachment = attachment;
+
+      const clientMessageId = createClientMessageId();
+      socket.send({
+        type: "message.send",
+        conversation_id: activeConversation.conversation_id,
+        client_message_id: clientMessageId,
+        body: readyAttachment.original_name,
+        attachment_id: readyAttachment.id,
+      });
+      setMessages((current) =>
+        appendMessageIfNew(current, {
+          id: clientMessageId,
+          clientMessageId,
+          conversationId: activeConversation.conversation_id,
+          senderId: activeUser.id,
+          body: readyAttachment.original_name,
+          messageType: "file",
+          attachmentId: readyAttachment.id,
+          createdAt: new Date().toISOString(),
+          policyStatus: "clean",
+          receiptStatus: "sending",
+        }),
+      );
+      setSelectedFile(null);
+      setPendingAttachment(null);
+      setAttachmentStatus({ state: "idle", label: "" });
+      setSocketStatus({ state: "joined", label: "Sending file..." });
+    } catch (error) {
+      setAttachmentStatus({
+        state: "error",
+        label: friendlyAttachmentError(error),
+      });
+    }
+  }
+
+  async function loadAttachmentMetadata(attachmentId: string) {
+    if (attachmentsById[attachmentId] || attachmentLoadsRef.current.has(attachmentId)) {
+      return;
+    }
+    const jwtToken = loadStoredAccessToken().trim();
+    if (!jwtToken) return;
+    attachmentLoadsRef.current.add(attachmentId);
+    try {
+      const attachment = await httpClient.getAttachment(jwtToken, attachmentId);
+      setAttachmentsById((current) => ({ ...current, [attachmentId]: attachment }));
+    } catch {
+      // The message remains usable with its attachment id when metadata is unavailable.
+    } finally {
+      attachmentLoadsRef.current.delete(attachmentId);
     }
   }
 
@@ -707,7 +826,32 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
                           : ""
                       }`}
                     >
-                      <p>{message.body}</p>
+                      {message.messageType === "file" && message.attachmentId ? (
+                        <div className="glass-attachment">
+                          <strong>
+                            {attachmentsById[message.attachmentId]
+                              ?.original_name ?? message.body ?? "Attachment"}
+                          </strong>
+                          <span>
+                            {attachmentDescription(
+                              attachmentsById[message.attachmentId],
+                            )}
+                          </span>
+                          <a
+                            href={attachmentHref(
+                              httpClient.config.apiBaseUrl,
+                              message.attachmentId,
+                              attachmentsById[message.attachmentId],
+                            )}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open attachment
+                          </a>
+                        </div>
+                      ) : (
+                        <p>{message.body}</p>
+                      )}
                       <footer>
                         <time>{formatMessageTime(message.createdAt)}</time>
                         {message.policyStatus !== "clean" ? (
@@ -731,14 +875,41 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
               : null}
           </div>
 
+          {selectedFile || attachmentStatus.label ? (
+            <div
+              className={`glass-attachment-status glass-attachment-status--${attachmentStatus.state}`}
+              role={attachmentStatus.state === "error" ? "alert" : "status"}
+            >
+              <span>{attachmentStatus.label || selectedFile?.name}</span>
+              {selectedFile && attachmentStatus.state !== "uploading" ? (
+                <button type="button" onClick={() => handleSelectedFile(null)}>
+                  Remove
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
           <form
             className="glass-composer"
             aria-label="Message composer"
             onSubmit={handleMessageSubmit}
           >
-            <span className="glass-composer__tool" aria-hidden="true">
-              +
-            </span>
+            <label className="glass-composer__tool" title="Attach a file">
+              <span aria-hidden="true">+</span>
+              <input
+                className="glass-composer__file"
+                key={selectedFile ? `${selectedFile.name}-${selectedFile.size}` : "empty"}
+                type="file"
+                onChange={(event) =>
+                  handleSelectedFile(event.target.files?.[0] ?? null)
+                }
+                disabled={
+                  !activeConversation ||
+                  socketStatus.state !== "joined" ||
+                  attachmentStatus.state === "uploading"
+                }
+              />
+            </label>
             <input
               aria-label="Message preview input"
               disabled={!activeConversation || socketStatus.state !== "joined"}
@@ -758,7 +929,8 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
               disabled={
                 !activeConversation ||
                 socketStatus.state !== "joined" ||
-                !messageDraft.trim()
+                (!messageDraft.trim() && !selectedFile && !pendingAttachment) ||
+                attachmentStatus.state === "uploading"
               }
               type="submit"
             >
@@ -899,6 +1071,8 @@ function messageFromEvent(
     conversationId: event.conversation_id,
     senderId: event.sender_id,
     body: event.body,
+    messageType: event.message_type,
+    attachmentId: event.attachment_id,
     createdAt: event.created_at || new Date().toISOString(),
     policyStatus: event.policy_status,
     receiptStatus: event.sender_id === activeUserId ? "sent" : undefined,
@@ -915,6 +1089,8 @@ function messageFromHistory(
     conversationId: message.conversation_id,
     senderId: message.sender_id,
     body: message.body,
+    messageType: message.message_type,
+    attachmentId: message.attachment_id,
     createdAt: message.created_at,
     policyStatus: message.policy_status,
     receiptStatus:
@@ -976,6 +1152,33 @@ function formatMessageTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function attachmentDescription(attachment: AttachmentResponse | undefined) {
+  if (!attachment) return "Attachment details unavailable";
+  return `${attachment.mime_type || "File"} · ${formatFileSize(attachment.size_bytes)}`;
+}
+
+function attachmentHref(
+  apiBaseUrl: string,
+  attachmentId: string,
+  attachment: AttachmentResponse | undefined,
+) {
+  const providedUrl = attachment?.download_url ?? attachment?.url;
+  if (providedUrl) {
+    try {
+      return new URL(providedUrl, apiBaseUrl).toString();
+    } catch {
+      // Fall back to the authenticated attachment endpoint.
+    }
+  }
+  return `${apiBaseUrl}/attachments/${encodeURIComponent(attachmentId)}`;
+}
+
+function formatFileSize(sizeBytes: number) {
+  if (sizeBytes < 1024) return `${sizeBytes} B`;
+  if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function createClientMessageId() {
@@ -1072,4 +1275,30 @@ function friendlyConversationError(error: unknown) {
     return "The backend is not reachable. Start the backend and try again.";
   }
   return "Could not open this direct conversation. Try again in a moment.";
+}
+
+function friendlyAttachmentError(error: unknown) {
+  if (error instanceof HttpApiError && error.status === 400) {
+    return "This file could not be uploaded. Check the file and try again.";
+  }
+  if (error instanceof HttpApiError && error.status === 401) {
+    return "Your messaging session has expired. Sign in again.";
+  }
+  if (error instanceof HttpApiError && error.status === 403) {
+    return "You do not have permission to attach files here.";
+  }
+  if (error instanceof HttpApiError && error.status === 404) {
+    return "This conversation is no longer available.";
+  }
+  if (error instanceof HttpApiError && error.status === 413) {
+    return "This file is larger than the backend allows.";
+  }
+  if (error instanceof HttpApiError && error.status === 415) {
+    return "This file type is not supported.";
+  }
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (message.includes("failed to fetch")) {
+    return "The backend is not reachable. Try the upload again later.";
+  }
+  return "The attachment could not be sent. Try again.";
 }

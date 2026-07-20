@@ -30,6 +30,10 @@ export type HttpClient = {
     conversationId: string,
     file: File,
   ) => Promise<AttachmentResponse>;
+  getAttachment: (
+    jwtToken: string,
+    attachmentId: string,
+  ) => Promise<AttachmentResponse>;
 };
 
 export type BackendCheckResponse = {
@@ -162,7 +166,19 @@ export type AttachmentResponse = {
   mime_type: string;
   size_bytes: number;
   created_at: string;
+  download_url?: string;
+  url?: string;
 };
+
+export class HttpApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "HttpApiError";
+    this.status = status;
+  }
+}
 
 export function createHttpClient(config: AppConfig): HttpClient {
   return {
@@ -191,6 +207,8 @@ export function createHttpClient(config: AppConfig): HttpClient {
     ) => createModerationFlag(config.apiBaseUrl, jwtToken, flag),
     uploadAttachment: (jwtToken: string, conversationId: string, file: File) =>
       uploadAttachment(config.apiBaseUrl, jwtToken, conversationId, file),
+    getAttachment: (jwtToken: string, attachmentId: string) =>
+      getAttachment(config.apiBaseUrl, jwtToken, attachmentId),
   };
 }
 
@@ -347,8 +365,31 @@ async function uploadAttachment(
   );
 
   if (!response.ok) {
-    throw new Error(`attachment upload returned ${response.status}`);
+    throw new HttpApiError(
+      `attachment upload returned ${response.status}`,
+      response.status,
+    );
   }
 
+  return response.json() as Promise<AttachmentResponse>;
+}
+
+async function getAttachment(
+  apiBaseUrl: string,
+  jwtToken: string,
+  attachmentId: string,
+) {
+  const response = await fetch(
+    `${apiBaseUrl}/attachments/${encodeURIComponent(attachmentId)}`,
+    {
+      headers: { Authorization: `Bearer ${jwtToken.trim()}` },
+    },
+  );
+  if (!response.ok) {
+    throw new HttpApiError(
+      `attachment metadata returned ${response.status}`,
+      response.status,
+    );
+  }
   return response.json() as Promise<AttachmentResponse>;
 }

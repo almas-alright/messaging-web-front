@@ -163,10 +163,10 @@ task(frontend-chat.09): align one-to-one message flow
 
 ## FE-CHAT-10 — Attachment flow with auth token
 
-- [ ] FE-CHAT-10.01 Upload attachment using messaging access token
-- [ ] FE-CHAT-10.02 Send file message with returned attachment id
-- [ ] FE-CHAT-10.03 Render attachment metadata/link
-- [ ] FE-CHAT-10.04 Handle upload failure and size/type errors
+- [x] FE-CHAT-10.01 Upload attachment using messaging access token
+- [x] FE-CHAT-10.02 Send file message with returned attachment id
+- [x] FE-CHAT-10.03 Render attachment metadata/link
+- [x] FE-CHAT-10.04 Handle upload failure and size/type errors
 
 Commit:
 
