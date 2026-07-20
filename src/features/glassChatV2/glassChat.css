@@ -334,6 +334,48 @@
   color: #8f3027;
 }
 
+.glass-search-results {
+  display: grid;
+  gap: 8px;
+}
+
+.glass-search-result {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 9px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 9px 10px;
+}
+
+.glass-search-result > div {
+  display: grid;
+  min-width: 0;
+}
+
+.glass-search-result span {
+  color: rgba(16, 35, 29, 0.62);
+  font-size: 0.82rem;
+}
+
+.glass-search-result button {
+  background: rgba(48, 119, 102, 0.92);
+  border: 0;
+  border-radius: 7px;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 6px 11px;
+}
+
+.glass-search-result button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .glass-contact-list {
   display: grid;
   gap: 10px;

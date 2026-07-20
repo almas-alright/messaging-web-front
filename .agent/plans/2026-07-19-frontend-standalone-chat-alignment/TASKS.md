@@ -115,11 +115,11 @@ task(frontend-chat.06): add authenticated chat shell
 
 ## FE-CHAT-07 — Contacts and direct conversation flow
 
-- [ ] FE-CHAT-07.01 Update contacts client to use authenticated APIs
-- [ ] FE-CHAT-07.02 Remove frontend-supplied `owner_user_id` from main flow
-- [ ] FE-CHAT-07.03 Add contact search/add/list UI using messaging token
-- [ ] FE-CHAT-07.04 Resolve/open one-to-one conversation from contact
-- [ ] FE-CHAT-07.05 Handle permission/404/conflict states cleanly
+- [x] FE-CHAT-07.01 Update contacts client to use authenticated APIs
+- [x] FE-CHAT-07.02 Remove frontend-supplied `owner_user_id` from main flow
+- [x] FE-CHAT-07.03 Add contact search/add/list UI using messaging token
+- [x] FE-CHAT-07.04 Resolve/open one-to-one conversation from contact
+- [x] FE-CHAT-07.05 Handle permission/404/conflict states cleanly
 
 Commit:
 

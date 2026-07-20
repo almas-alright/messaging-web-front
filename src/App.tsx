@@ -219,7 +219,7 @@ function StandaloneApp() {
           {isLoggingOut ? "Signing out…" : "Sign out"}
         </button>
       </header>
-      <GlassChatApp />
+      <GlassChatApp currentUser={sessionState.user} />
     </div>
   );
 }

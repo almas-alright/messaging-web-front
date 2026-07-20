@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
+  BackendV2Error,
   createBackendV2Client,
   type ContactConversationResponse,
   type ContactPresenceResponse,
@@ -7,6 +8,7 @@ import {
   type DemoUserResponse,
   type PresenceStatus,
 } from "../../api/v2Client";
+import type { AuthUserResponse } from "../../api/authClient";
 import { loadStoredAccessToken } from "../../auth/sessionStorage";
 import { loadStoredConfig } from "../../config/storage";
 import {
@@ -17,8 +19,6 @@ import {
   type ServerEvent,
 } from "../../realtime/webSocketClient";
 import "./glassChat.css";
-
-const activeUserStorageKey = "messaging-web-front:glass-chat-v2:active-user";
 
 type GlassMessage = {
   id: string;
@@ -31,16 +31,21 @@ type GlassMessage = {
   receiptStatus?: "sending" | "sent" | "delivered" | "seen";
 };
 
-export function GlassChatApp() {
+type GlassChatAppProps = {
+  currentUser: AuthUserResponse;
+};
+
+export function GlassChatApp({ currentUser }: GlassChatAppProps) {
   const webSocketRef = useRef<MessagingWebSocket | null>(null);
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
-  const [activeUser, setActiveUser] = useState<DemoUserResponse | null>(() =>
-    loadActiveUser(),
-  );
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const activeUser = {
+    id: currentUser.user_id,
+    email: currentUser.email ?? "",
+    username: currentUser.username ?? currentUser.user_id,
+    display_name: currentUser.display_name,
+  };
   const [contacts, setContacts] = useState<ContactResponse[]>([]);
+  const [searchResults, setSearchResults] = useState<DemoUserResponse[]>([]);
   const [presenceByUserId, setPresenceByUserId] = useState<
     Record<string, ContactPresenceResponse>
   >({});
@@ -73,13 +78,6 @@ export function GlassChatApp() {
     state: "idle",
     label: "",
   });
-  const [identityStatus, setIdentityStatus] = useState<{
-    state: "idle" | "creating" | "error";
-    label: string;
-  }>({
-    state: "idle",
-    label: "",
-  });
   const v2Client = useMemo(
     () => createBackendV2Client(loadStoredConfig()),
     [],
@@ -98,92 +96,30 @@ export function GlassChatApp() {
   }, []);
 
   useEffect(() => {
-    if (!activeUser) {
-      setContacts([]);
-      setPresenceByUserId({});
-      setSelectedContactId(null);
-      setActiveConversation(null);
-      setMessages([]);
-      setMessageDraft("");
-      disconnectGlassSocket();
-      setConversationStatus({ state: "idle", label: "" });
-      setContactStatus({ state: "idle", label: "" });
-      return;
-    }
-
-    void refreshContacts(activeUser.id);
-  }, [activeUser?.id]);
+    void refreshContacts();
+  }, [activeUser.id]);
 
   useEffect(() => {
-    if (!activeUser || !activeConversation) {
+    if (!activeConversation) {
       disconnectGlassSocket();
       setSocketStatus({
         state: "idle",
-        label: activeUser ? "Select a contact to connect." : "",
+        label: "Select a contact to connect.",
       });
       return;
     }
 
     connectGlassSocket(activeConversation.conversation_id);
-  }, [activeConversation?.conversation_id, activeUser?.id]);
+  }, [activeConversation?.conversation_id, activeUser.id]);
 
-  async function handleIdentitySubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIdentityStatus({
-      state: "creating",
-      label: "Creating your demo identity...",
-    });
-
-    try {
-      const created = await v2Client.createDemoUser({
-        email: email.trim(),
-        username: username.trim(),
-        display_name: displayName.trim() || undefined,
-      });
-      saveActiveUser(created);
-      setActiveUser(created);
-      setContacts([]);
-      setPresenceByUserId({});
-      setSelectedContactId(null);
-      setActiveConversation(null);
-      setMessages([]);
-      setMessageDraft("");
-      setConversationStatus({ state: "idle", label: "" });
-      setContactStatus({ state: "idle", label: "" });
-      setEmail("");
-      setUsername("");
-      setDisplayName("");
-      setIdentityStatus({ state: "idle", label: "" });
-    } catch (error) {
-      setIdentityStatus({
-        state: "error",
-        label: friendlyIdentityError(error),
-      });
-    }
-  }
-
-  function handleIdentityReset() {
-    clearActiveUser();
-    setActiveUser(null);
-    setContacts([]);
-    setPresenceByUserId({});
-    setSelectedContactId(null);
-    setActiveConversation(null);
-    setMessages([]);
-    setMessageDraft("");
-    disconnectGlassSocket();
-    setConversationStatus({ state: "idle", label: "" });
-    setContactDraft("");
-    setContactStatus({ state: "idle", label: "" });
-    setIdentityStatus({ state: "idle", label: "" });
-  }
-
-  async function refreshContacts(ownerUserId: string) {
+  async function refreshContacts() {
+    const jwtToken = loadStoredAccessToken().trim();
+    if (!jwtToken) return;
     setContactStatus({ state: "loading", label: "Loading contacts..." });
     try {
-      const response = await v2Client.listContacts(ownerUserId);
+      const response = await v2Client.listContacts(jwtToken);
       setContacts(uniqueContacts(response.contacts));
-      await refreshContactPresence(ownerUserId);
+      await refreshContactPresence();
       setSelectedContactId((current) => {
         if (
           current &&
@@ -211,20 +147,41 @@ export function GlassChatApp() {
 
   async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!activeUser || !contactDraft.trim()) {
+    const jwtToken = loadStoredAccessToken().trim();
+    if (!jwtToken || !contactDraft.trim()) {
       return;
     }
 
+    setContactStatus({ state: "loading", label: "Searching people..." });
+    try {
+      const response = await v2Client.searchUsers(jwtToken, contactDraft.trim());
+      const results = response.users.filter((user) => user.id !== activeUser.id);
+      setSearchResults(results);
+      setContactStatus({
+        state: "ok",
+        label: results.length
+          ? `${results.length} result${results.length === 1 ? "" : "s"} found.`
+          : "No people matched that search.",
+      });
+    } catch (error) {
+      setSearchResults([]);
+      setContactStatus({ state: "error", label: friendlyContactError(error) });
+    }
+  }
+
+  async function handleContactAdd(user: DemoUserResponse) {
+    const jwtToken = loadStoredAccessToken().trim();
+    if (!jwtToken) return;
     setContactStatus({ state: "adding", label: "Adding contact..." });
     try {
-      const created = await v2Client.addContact({
-        owner_user_id: activeUser.id,
-        contact: contactDraft.trim(),
+      const created = await v2Client.addContact(jwtToken, {
+        contact: user.username || user.email,
       });
       setContacts((current) => uniqueContacts([...current, created]));
       setContactDraft("");
+      setSearchResults([]);
       setContactStatus({ state: "ok", label: "Contact added." });
-      await refreshContacts(activeUser.id);
+      await refreshContacts();
       await handleContactSelect(created);
     } catch (error) {
       setContactStatus({
@@ -235,10 +192,6 @@ export function GlassChatApp() {
   }
 
   async function handleContactSelect(contact: ContactResponse) {
-    if (!activeUser) {
-      return;
-    }
-
     setSelectedContactId(contact.id);
     setActiveConversation(null);
     setMessages([]);
@@ -251,9 +204,12 @@ export function GlassChatApp() {
     });
 
     try {
-      const resolved = await v2Client.resolveContactConversation(contact.id, {
-        owner_user_id: activeUser.id,
-      });
+      const jwtToken = loadStoredAccessToken().trim();
+      if (!jwtToken) return;
+      const resolved = await v2Client.resolveContactConversation(
+        jwtToken,
+        contact.id,
+      );
       setActiveConversation(resolved);
       setConversationStatus({
         state: "open",
@@ -284,21 +240,17 @@ export function GlassChatApp() {
     const client = createMessagingWebSocket(loadStoredConfig(), jwtToken, {
       onOpen: () => {
         setSocketStatus({ state: "connecting", label: "Joining conversation..." });
-        if (activeUser) {
-          void refreshContactPresence(activeUser.id);
-        }
+        void refreshContactPresence();
       },
       onMessage: (event) => handleGlassSocketMessage(event, conversationId),
       onClose: () => {
         setSocketStatus({ state: "idle", label: "Chat disconnected." });
-        if (activeUser) {
-          void refreshContactPresence(activeUser.id);
-        }
+        void refreshContactPresence();
       },
       onError: () => {
         setSocketStatus({
           state: "error",
-          label: "Could not connect to chat. Check the backend and demo token.",
+          label: "Could not connect to chat. Check the backend and session.",
         });
       },
     });
@@ -312,9 +264,11 @@ export function GlassChatApp() {
     webSocketRef.current = null;
   }
 
-  async function refreshContactPresence(ownerUserId: string) {
+  async function refreshContactPresence() {
+    const jwtToken = loadStoredAccessToken().trim();
+    if (!jwtToken) return;
     try {
-      const response = await v2Client.getContactsPresence(ownerUserId);
+      const response = await v2Client.getContactsPresence(jwtToken);
       setPresenceByUserId(presenceMapFromContacts(response.contacts));
     } catch {
       // Presence is advisory for this phase; contact loading and chat still work.
@@ -346,7 +300,7 @@ export function GlassChatApp() {
     }
 
     if (isMessageCreatedEvent(event) && event.conversation_id === conversationId) {
-      const nextMessage = messageFromEvent(event, activeUser?.id);
+      const nextMessage = messageFromEvent(event, activeUser.id);
       setMessages((current) => upsertMessageFromServer(current, nextMessage));
       void markContactMessageSeen(nextMessage);
       setSocketStatus({ state: "joined", label: "Live chat connected." });
@@ -369,7 +323,7 @@ export function GlassChatApp() {
   function handleMessageSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const body = messageDraft.trim();
-    if (!activeConversation || !activeUser || !body) {
+    if (!activeConversation || !body) {
       return;
     }
 
@@ -407,7 +361,7 @@ export function GlassChatApp() {
   }
 
   async function markContactMessageSeen(message: GlassMessage) {
-    if (!activeUser || message.senderId === activeUser.id) {
+    if (message.senderId === activeUser.id) {
       return;
     }
     if (seenMessageIdsRef.current.has(message.id)) {
@@ -425,75 +379,6 @@ export function GlassChatApp() {
     } catch {
       seenMessageIdsRef.current.delete(message.id);
     }
-  }
-
-  if (!activeUser) {
-    return (
-      <main className="glass-chat-page glass-chat-page--setup">
-        <section className="glass-identity-card" aria-labelledby="identity-title">
-          <div className="glass-identity-card__copy">
-            <p className="glass-kicker">Glass chat v2</p>
-            <h1 id="identity-title">Create your demo identity</h1>
-            <p>
-              Use an email and unique username to preview the next chat
-              experience.
-            </p>
-          </div>
-
-          <form className="glass-identity-form" onSubmit={handleIdentitySubmit}>
-            <label>
-              <span>Email</span>
-              <input
-                autoComplete="email"
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="akash@example.com"
-                required
-                type="email"
-                value={email}
-              />
-            </label>
-            <label>
-              <span>Username</span>
-              <input
-                autoComplete="username"
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder="akash"
-                required
-                type="text"
-                value={username}
-              />
-            </label>
-            <label>
-              <span>Display name</span>
-              <input
-                autoComplete="name"
-                onChange={(event) => setDisplayName(event.target.value)}
-                placeholder="Akash"
-                type="text"
-                value={displayName}
-              />
-            </label>
-
-            {identityStatus.label ? (
-              <p
-                className={`glass-identity-status glass-identity-status--${identityStatus.state}`}
-                role={identityStatus.state === "error" ? "alert" : "status"}
-              >
-                {identityStatus.label}
-              </p>
-            ) : null}
-
-            <button
-              className="glass-primary-button"
-              disabled={identityStatus.state === "creating"}
-              type="submit"
-            >
-              {identityStatus.state === "creating" ? "Creating..." : "Continue"}
-            </button>
-          </form>
-        </section>
-      </main>
-    );
   }
 
   return (
@@ -514,10 +399,13 @@ export function GlassChatApp() {
 
           <form className="glass-contact-form" onSubmit={handleContactSubmit}>
             <label className="glass-search">
-              <span>Add contact</span>
+              <span>Find people</span>
               <input
-                aria-label="Add contact by email or username"
-                disabled={contactStatus.state === "adding"}
+                aria-label="Search by email or username"
+                disabled={
+                  contactStatus.state === "adding" ||
+                  contactStatus.state === "loading"
+                }
                 onChange={(event) => setContactDraft(event.target.value)}
                 placeholder="email or username"
                 type="text"
@@ -526,10 +414,14 @@ export function GlassChatApp() {
             </label>
             <button
               className="glass-contact-form__button"
-              disabled={!contactDraft.trim() || contactStatus.state === "adding"}
+              disabled={
+                !contactDraft.trim() ||
+                contactStatus.state === "adding" ||
+                contactStatus.state === "loading"
+              }
               type="submit"
             >
-              Add
+              Search
             </button>
           </form>
 
@@ -540,6 +432,26 @@ export function GlassChatApp() {
             >
               {contactStatus.label}
             </p>
+          ) : null}
+
+          {searchResults.length ? (
+            <div className="glass-search-results" aria-label="Search results">
+              {searchResults.map((user) => (
+                <article className="glass-search-result" key={user.id}>
+                  <div>
+                    <strong>{user.display_name}</strong>
+                    <span>@{user.username}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleContactAdd(user)}
+                    disabled={contactStatus.state === "adding"}
+                  >
+                    Add
+                  </button>
+                </article>
+              ))}
+            </div>
           ) : null}
 
           <div className="glass-contact-list" aria-label="Contacts">
@@ -614,9 +526,6 @@ export function GlassChatApp() {
               </div>
             </div>
             <div className="glass-header-actions">
-              <button type="button" onClick={handleIdentityReset}>
-                Reset identity
-              </button>
               <a className="glass-demo-link" href="/demo">
                 Developer demo
               </a>
@@ -757,30 +666,6 @@ function getInitials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase() || "U";
-}
-
-function loadActiveUser() {
-  try {
-    const raw = window.localStorage.getItem(activeUserStorageKey);
-    if (!raw) {
-      return null;
-    }
-    const parsed = JSON.parse(raw) as DemoUserResponse;
-    if (!parsed.id || !parsed.email || !parsed.username) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function saveActiveUser(user: DemoUserResponse) {
-  window.localStorage.setItem(activeUserStorageKey, JSON.stringify(user));
-}
-
-function clearActiveUser() {
-  window.localStorage.removeItem(activeUserStorageKey);
 }
 
 function uniqueContacts(contacts: ContactResponse[]) {
@@ -978,54 +863,43 @@ function isMessageReceiptEvent(event: ServerEvent): event is MessageReceiptEvent
   );
 }
 
-function friendlyIdentityError(error: unknown) {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-  if (message.includes("email already exists")) {
-    return "That email is already in use. Try a different email for this demo.";
-  }
-  if (message.includes("username already exists")) {
-    return "That username is already taken. Choose another username.";
-  }
-  if (message.includes("400")) {
-    return "Check the email and username fields, then try again.";
-  }
-  if (message.includes("failed to fetch")) {
-    return "The backend is not reachable. Start the backend and try again.";
-  }
-  return "Could not create this demo identity. Try again in a moment.";
-}
-
 function friendlyContactError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
-  if (message.includes("contact user not found") || message.includes("404")) {
-    return "No demo user was found for that email or username.";
+  if (error instanceof BackendV2Error && error.status === 401) {
+    return "Your messaging session has expired. Sign in again.";
+  }
+  if (error instanceof BackendV2Error && error.status === 403) {
+    return "You do not have permission to update these contacts.";
+  }
+  if (error instanceof BackendV2Error && error.status === 404) {
+    return "No user was found for that email or username.";
+  }
+  if (error instanceof BackendV2Error && error.status === 409) {
+    return "That person is already in your contacts.";
   }
   if (message.includes("cannot add self")) {
     return "You cannot add yourself as a contact.";
   }
-  if (message.includes("owner user not found")) {
-    return "Your active demo identity was not found. Reset and create it again.";
-  }
-  if (message.includes("failed to fetch")) {
+  if (message.includes("failed to fetch") || message.includes("network")) {
     return "The backend is not reachable. Start the backend and try again.";
   }
   return "Could not update contacts. Try again in a moment.";
 }
 
 function friendlyConversationError(error: unknown) {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-  if (
-    message.includes("contact relationship required") ||
-    message.includes("403")
-  ) {
+  if (error instanceof BackendV2Error && error.status === 401) {
+    return "Your messaging session has expired. Sign in again.";
+  }
+  if (error instanceof BackendV2Error && error.status === 403) {
     return "This user is not in your contacts yet.";
   }
-  if (message.includes("contact user not found") || message.includes("404")) {
-    return "That contact no longer exists in the demo backend.";
+  if (error instanceof BackendV2Error && error.status === 404) {
+    return "That contact or conversation could not be found.";
   }
-  if (message.includes("owner user not found")) {
-    return "Your active demo identity was not found. Reset and create it again.";
+  if (error instanceof BackendV2Error && error.status === 409) {
+    return "A direct conversation could not be resolved right now.";
   }
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
   if (message.includes("failed to fetch")) {
     return "The backend is not reachable. Start the backend and try again.";
   }
