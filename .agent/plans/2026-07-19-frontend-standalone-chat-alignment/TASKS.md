@@ -4,10 +4,10 @@ Working branch: `frontend-standalone-chat-alignment`
 
 ## FE-CHAT-01 — Agent workflow alignment
 
-- [ ] FE-CHAT-01.01 Replace frontend `AGENTS.md` with backend-style minimal startup rules
-- [ ] FE-CHAT-01.02 Replace frontend `CODEX.md` with `.agent/CURRENT_PLAN.md` pointer
-- [ ] FE-CHAT-01.03 Ensure old `.workflows` remain legacy only
-- [ ] FE-CHAT-01.04 Update `.agent/state/HANDOFF.md`
+- [x] FE-CHAT-01.01 Replace frontend `AGENTS.md` with backend-style minimal startup rules
+- [x] FE-CHAT-01.02 Replace frontend `CODEX.md` with `.agent/CURRENT_PLAN.md` pointer
+- [x] FE-CHAT-01.03 Ensure old `.workflows` remain legacy only
+- [x] FE-CHAT-01.04 Update `.agent/state/HANDOFF.md`
 
 Commit:
 
