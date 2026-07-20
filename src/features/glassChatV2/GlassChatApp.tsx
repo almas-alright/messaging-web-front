@@ -9,6 +9,10 @@ import {
   type PresenceStatus,
 } from "../../api/v2Client";
 import {
+  createHttpClient,
+  type ConversationMessageResponse,
+} from "../../api/httpClient";
+import {
   createAuthClient,
   type AuthUserResponse,
 } from "../../api/authClient";
@@ -63,6 +67,10 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
   const [activeConversation, setActiveConversation] =
     useState<ContactConversationResponse | null>(null);
   const [messages, setMessages] = useState<GlassMessage[]>([]);
+  const [historyStatus, setHistoryStatus] = useState<{
+    state: "idle" | "loading" | "loaded" | "error";
+    label: string;
+  }>({ state: "idle", label: "" });
   const [messageDraft, setMessageDraft] = useState("");
   const [socketStatus, setSocketStatus] = useState<{
     state: "idle" | "connecting" | "connected" | "joined" | "error";
@@ -90,6 +98,7 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     () => createBackendV2Client(loadStoredConfig()),
     [],
   );
+  const httpClient = useMemo(() => createHttpClient(loadStoredConfig()), []);
   const selectedContact =
     contacts.find((contact) => contact.id === selectedContactId) ?? null;
   const selectedContactPresence = selectedContact
@@ -119,7 +128,38 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     }
 
     connectGlassSocket(activeConversation.conversation_id);
+    void loadConversationHistory(activeConversation.conversation_id);
   }, [activeConversation?.conversation_id, activeUser.id]);
+
+  async function loadConversationHistory(conversationId: string) {
+    const jwtToken = loadStoredAccessToken().trim();
+    if (!jwtToken) return;
+    setHistoryStatus({ state: "loading", label: "Loading messages..." });
+    try {
+      const response = await httpClient.getConversationMessages(
+        jwtToken,
+        conversationId,
+        { limit: 50 },
+      );
+      const history = response.messages.map((message) =>
+        messageFromHistory(message, activeUser.id),
+      );
+      setMessages((current) => mergeMessages(current, history));
+      setHistoryStatus({
+        state: "loaded",
+        label: "",
+      });
+      history.forEach((message) => void markContactMessageSeen(message));
+    } catch (error) {
+      setHistoryStatus({
+        state: "error",
+        label:
+          error instanceof Error
+            ? error.message
+            : "Could not load message history.",
+      });
+    }
+  }
 
   async function refreshContacts() {
     const jwtToken = loadStoredAccessToken().trim();
@@ -204,6 +244,7 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     setSelectedContactId(contact.id);
     setActiveConversation(null);
     setMessages([]);
+    setHistoryStatus({ state: "idle", label: "" });
     seenMessageIdsRef.current = new Set();
     setMessageDraft("");
     disconnectGlassSocket();
@@ -634,8 +675,17 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
             ) : null}
             {selectedContact && activeConversation && messages.length === 0 ? (
               <article className="glass-conversation-empty">
-                <strong>No messages yet</strong>
-                <span>Send the first message in this direct conversation.</span>
+                <strong>
+                  {historyStatus.state === "loading"
+                    ? "Loading messages"
+                    : historyStatus.state === "error"
+                      ? "Message history unavailable"
+                      : "No messages yet"}
+                </strong>
+                <span>
+                  {historyStatus.label ||
+                    "Send the first message in this direct conversation."}
+                </span>
               </article>
             ) : null}
             {selectedContact && activeConversation
@@ -853,6 +903,35 @@ function messageFromEvent(
     policyStatus: event.policy_status,
     receiptStatus: event.sender_id === activeUserId ? "sent" : undefined,
   };
+}
+
+function messageFromHistory(
+  message: ConversationMessageResponse,
+  activeUserId: string,
+): GlassMessage {
+  return {
+    id: message.id,
+    clientMessageId: message.client_message_id,
+    conversationId: message.conversation_id,
+    senderId: message.sender_id,
+    body: message.body,
+    createdAt: message.created_at,
+    policyStatus: message.policy_status,
+    receiptStatus:
+      message.receipt_status ??
+      (message.sender_id === activeUserId ? "sent" : undefined),
+  };
+}
+
+function mergeMessages(...messageGroups: GlassMessage[][]) {
+  let merged: GlassMessage[] = [];
+  for (const message of messageGroups.flat()) {
+    merged = upsertMessageFromServer(merged, message);
+  }
+  return merged.sort(
+    (left, right) =>
+      new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+  );
 }
 
 function maxReceiptStatus(

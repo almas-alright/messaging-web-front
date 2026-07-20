@@ -147,11 +147,11 @@ task(frontend-chat.08): connect websocket with messaging token
 
 ## FE-CHAT-09 — Message history, send, receipts
 
-- [ ] FE-CHAT-09.01 Load conversation history after opening conversation
-- [ ] FE-CHAT-09.02 Render own/other messages
-- [ ] FE-CHAT-09.03 Send text messages through WebSocket
-- [ ] FE-CHAT-09.04 Render delivered/seen status
-- [ ] FE-CHAT-09.05 Mark visible received messages as seen where appropriate
+- [x] FE-CHAT-09.01 Load conversation history after opening conversation
+- [x] FE-CHAT-09.02 Render own/other messages
+- [x] FE-CHAT-09.03 Send text messages through WebSocket
+- [x] FE-CHAT-09.04 Render delivered/seen status
+- [x] FE-CHAT-09.05 Mark visible received messages as seen where appropriate
 
 Commit:
 

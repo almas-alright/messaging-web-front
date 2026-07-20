@@ -60,6 +60,7 @@ export type ConversationMessageResponse = {
   message_type: "text" | "file" | "system";
   policy_status: "clean" | "flagged" | "blocked";
   attachment_id?: string;
+  receipt_status?: "sent" | "delivered" | "seen";
   created_at: string;
 };
 
