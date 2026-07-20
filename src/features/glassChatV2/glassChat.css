@@ -334,6 +334,48 @@
   color: #8f3027;
 }
 
+.glass-search-results {
+  display: grid;
+  gap: 8px;
+}
+
+.glass-search-result {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 9px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 9px 10px;
+}
+
+.glass-search-result > div {
+  display: grid;
+  min-width: 0;
+}
+
+.glass-search-result span {
+  color: rgba(16, 35, 29, 0.62);
+  font-size: 0.82rem;
+}
+
+.glass-search-result button {
+  background: rgba(48, 119, 102, 0.92);
+  border: 0;
+  border-radius: 7px;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 6px 11px;
+}
+
+.glass-search-result button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .glass-contact-list {
   display: grid;
   gap: 10px;
@@ -414,7 +456,7 @@
 
 .glass-conversation {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   min-width: 0;
 }
 
@@ -580,6 +622,23 @@
   overflow-wrap: anywhere;
 }
 
+.glass-attachment {
+  display: grid;
+  gap: 4px;
+  min-width: min(280px, 60vw);
+}
+
+.glass-attachment span {
+  color: rgba(16, 35, 29, 0.62);
+  font-size: 0.78rem;
+}
+
+.glass-attachment a {
+  color: #216b59;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .glass-message footer {
   align-items: center;
   color: rgba(16, 35, 29, 0.58);
@@ -617,6 +676,31 @@
   padding: 14px 20px;
 }
 
+.glass-attachment-status {
+  align-items: center;
+  background: rgba(235, 246, 241, 0.82);
+  border-top: 1px solid rgba(255, 255, 255, 0.52);
+  color: #245f51;
+  display: flex;
+  font-size: 0.82rem;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 8px 20px;
+}
+
+.glass-attachment-status--error {
+  background: rgba(255, 238, 235, 0.78);
+  color: #8f3027;
+}
+
+.glass-attachment-status button {
+  background: transparent;
+  border: 0;
+  color: currentColor;
+  cursor: pointer;
+  font-weight: 800;
+}
+
 .glass-composer input {
   flex: 1 1 auto;
   min-height: 46px;
@@ -646,6 +730,14 @@
   width: 42px;
 }
 
+.glass-composer__tool {
+  cursor: pointer;
+}
+
+.glass-composer__file {
+  display: none;
+}
+
 .glass-composer__send {
   cursor: pointer;
   font-size: 0.78rem;
@@ -665,6 +757,7 @@
   padding: 8px 20px 12px;
 }
 
+.glass-socket-status--connected,
 .glass-socket-status--joined {
   color: #245f51;
 }

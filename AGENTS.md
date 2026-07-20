@@ -1,103 +1,70 @@
 # AGENTS.md
 
-Global rules for this frontend repository.
+## Scope
 
-## Project
+Messaging Web Front is a React + TypeScript frontend for the reusable messaging backend. Keep authentication, token handling, WebSocket connection, conversation permissions, and user-facing chat flows clean and isolated.
 
-Messaging Web Front is a frontend-only chat application for the reusable messaging backend service.
+## Minimal Startup
 
-Backend repo:
+Before selecting work, read only:
 
-```text
-https://github.com/almas-alright/messaging-service
-```
+1. `AGENTS.md`
+2. `.agent/CURRENT_PLAN.md`
+3. The active plan's `TASKS.md`
 
-## Stack
+Read only the first unchecked task and the source/test files directly related to it.
 
-- Vite
-- React
-- TypeScript
-- Simple CSS first
-- Browser WebSocket
-- Browser Fetch API
-- No heavy UI library in the first demo
+Do not read `CODEX.md`, `EXECUTION_RULES.md`, `PLAN.md`, `ACCEPTANCE.md`, `DECISIONS.md`, `.context/`, `.workflows/`, all docs, or archived plans by default. Open one only when the current task requires information not available in the startup files or relevant code.
 
-## Product Direction
+## Workflow
 
-Initial demo:
+- `.agent/CURRENT_PLAN.md` is the source of truth. If `active_plan` is `none`, stop and ask for a plan.
+- One plan uses one branch; one task uses one commit.
+- Do only the first unchecked task, update `.agent/state/HANDOFF.md`, commit, and stop.
+- Do not redesign completed work or jump to later tasks.
+- Commit format: `task(<plan-id>.<task-number>): <short summary>`.
 
-- WhatsApp-like chat window
-- Manual JWT input
-- Configurable backend API base URL
-- Configurable WebSocket URL
-- Conversation join
-- Realtime send/receive
-- Emoji support
-- File upload/send
-- Attachment link/preview
-- Local network demo from Ubuntu host
+## Implementation Safety
 
-Future:
+- Never hardcode or log secrets, access tokens, refresh tokens, OTPs, or magic links.
+- Do not put backend-only secrets in frontend code.
+- Use messaging-issued access tokens for REST and WebSocket.
+- Keep backend URL and WebSocket URL configurable.
+- Do not implement support widget, embedded platform chat, or AI chat unless the active task requests it.
+- Keep shared client code reusable for later support widget and embedded platform phases.
 
-- tawk.to-like embeddable chat widget
-- iframe/script embed
-- compact floating chat launcher
-- voice message sending
-- optional AI bot on a specific chat side
-- human takeover from AI bot
+## Checks
 
-## Hard Rules
-
-- Frontend only.
-- Do not implement backend code here.
-- Do not duplicate backend business logic.
-- Backend URL and WebSocket URL must be configurable.
-- Do not hardcode `localhost` as the only usable backend target.
-- Do not implement AI bot in first demo.
-- Do not implement voice messages in first demo.
-- Do not implement embed widget in first demo.
-- Keep the UI simple and testable.
-
-## Workflow Rules
-
-- One phase = one branch.
-- One task = one commit.
-- Stop after each phase.
-- Do not do all phases together.
-
-Branch format:
-
-```text
-phase/<phase-number>-<phase-slug>
-```
-
-Commit format:
-
-```text
-task(<phase-number>.<task-number>): <short task summary>
-```
-
-## Required Checks
-
-For implementation phases, run when applicable:
+Run only checks applicable to changed code:
 
 ```bash
-npm install
 npm run build
 npm run lint
 ```
 
-If lint is not configured yet, do not invent extra tooling unless the phase asks for it.
+If lint is not configured, do not add lint tooling unless the active task requests it.
 
-## Stop Rule
+## Communication
 
-After each phase, report:
+Work silently. Do not send preambles, narration, discoveries, plans, or progress updates.
 
-- Branch
-- Commits
-- Files changed
-- Checks run
-- Blockers
-- Next phase
+Speak before completion only when:
+- user input is required
+- approval is required
+- destructive confirmation is required
+- a blocker prevents progress
 
-Do not continue to the next phase without approval.
+## Final Response Style
+
+Final report: exactly six short lines:
+
+```text
+Branch: <branch>
+Commit: <commit-or-none>
+Files: <changed-files-or-none>
+Checks: <checks-or-none>
+Blockers: <blockers-or-none>
+Next: <next-task-or-none>
+```
+
+Use `none` when empty and stop until approval or `next`.

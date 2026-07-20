@@ -3,19 +3,23 @@ import type { AppConfig } from "../config/env";
 export type BackendV2Client = {
   config: AppConfig;
   createDemoUser: (request: DemoUserCreateRequest) => Promise<DemoUserResponse>;
-  searchUsers: (query: string) => Promise<UserSearchResponse>;
-  getUser: (userId: string) => Promise<DemoUserResponse>;
-  addContact: (request: AddContactRequest) => Promise<ContactResponse>;
-  listContacts: (ownerUserId: string) => Promise<ContactListResponse>;
-  deleteContact: (ownerUserId: string, contactId: string) => Promise<void>;
+  searchUsers: (jwtToken: string, query: string) => Promise<UserSearchResponse>;
+  getUser: (jwtToken: string, userId: string) => Promise<DemoUserResponse>;
+  addContact: (
+    jwtToken: string,
+    request: AddContactRequest,
+  ) => Promise<ContactResponse>;
+  listContacts: (jwtToken: string) => Promise<ContactListResponse>;
+  deleteContact: (jwtToken: string, contactId: string) => Promise<void>;
   resolveContactConversation: (
+    jwtToken: string,
     contactUserId: string,
-    request: ResolveContactConversationRequest,
   ) => Promise<ContactConversationResponse>;
-  getUserPresence: (userId: string) => Promise<UserPresenceResponse>;
-  getContactsPresence: (
-    ownerUserId: string,
-  ) => Promise<ContactPresenceListResponse>;
+  getUserPresence: (
+    jwtToken: string,
+    userId: string,
+  ) => Promise<UserPresenceResponse>;
+  getContactsPresence: (jwtToken: string) => Promise<ContactPresenceListResponse>;
   markMessageSeen: (
     jwtToken: string,
     messageId: string,
@@ -43,7 +47,6 @@ export type UserSearchResponse = {
 };
 
 export type AddContactRequest = {
-  owner_user_id: string;
   contact: string;
 };
 
@@ -57,12 +60,7 @@ export type ContactResponse = {
 };
 
 export type ContactListResponse = {
-  owner_user_id: string;
   contacts: ContactResponse[];
-};
-
-export type ResolveContactConversationRequest = {
-  owner_user_id: string;
 };
 
 export type ContactConversationResponse = {
@@ -87,7 +85,6 @@ export type UserPresenceResponse = {
 };
 
 export type ContactPresenceListResponse = {
-  owner_user_id: string;
   contacts: ContactPresenceResponse[];
 };
 
@@ -124,62 +121,58 @@ export function createBackendV2Client(config: AppConfig): BackendV2Client {
         body: request,
         method: "POST",
       }),
-    searchUsers: (query: string) => {
+    searchUsers: (jwtToken: string, query: string) => {
       const params = new URLSearchParams({ query });
       return requestJson<UserSearchResponse>(
         config.apiBaseUrl,
         `/users/search?${params.toString()}`,
+        { jwtToken },
       );
     },
-    getUser: (userId: string) =>
+    getUser: (jwtToken: string, userId: string) =>
       requestJson<DemoUserResponse>(
         config.apiBaseUrl,
         `/users/${encodeURIComponent(userId)}`,
+        { jwtToken },
       ),
-    addContact: (request: AddContactRequest) =>
+    addContact: (jwtToken: string, request: AddContactRequest) =>
       requestJson<ContactResponse>(config.apiBaseUrl, "/contacts", {
+        jwtToken,
         body: request,
         method: "POST",
       }),
-    listContacts: (ownerUserId: string) => {
-      const params = new URLSearchParams({ owner_user_id: ownerUserId });
-      return requestJson<ContactListResponse>(
-        config.apiBaseUrl,
-        `/contacts?${params.toString()}`,
-      );
-    },
-    deleteContact: (ownerUserId: string, contactId: string) => {
-      const params = new URLSearchParams({ owner_user_id: ownerUserId });
+    listContacts: (jwtToken: string) =>
+      requestJson<ContactListResponse>(config.apiBaseUrl, "/contacts", {
+        jwtToken,
+      }),
+    deleteContact: (jwtToken: string, contactId: string) => {
       return requestNoContent(
         config.apiBaseUrl,
-        `/contacts/${encodeURIComponent(contactId)}?${params.toString()}`,
-        { method: "DELETE" },
+        `/contacts/${encodeURIComponent(contactId)}`,
+        { jwtToken, method: "DELETE" },
       );
     },
-    resolveContactConversation: (
-      contactUserId: string,
-      request: ResolveContactConversationRequest,
-    ) =>
+    resolveContactConversation: (jwtToken: string, contactUserId: string) =>
       requestJson<ContactConversationResponse>(
         config.apiBaseUrl,
         `/contacts/${encodeURIComponent(contactUserId)}/conversation`,
         {
-          body: request,
+          jwtToken,
           method: "POST",
         },
       ),
-    getUserPresence: (userId: string) =>
+    getUserPresence: (jwtToken: string, userId: string) =>
       requestJson<UserPresenceResponse>(
         config.apiBaseUrl,
         `/presence/users/${encodeURIComponent(userId)}`,
+        { jwtToken },
       ),
-    getContactsPresence: (ownerUserId: string) => {
-      const params = new URLSearchParams({ owner_user_id: ownerUserId });
-      return requestJson<ContactPresenceListResponse>(
+    getContactsPresence: (jwtToken: string) =>
+      requestJson<ContactPresenceListResponse>(
         config.apiBaseUrl,
-        `/contacts/presence?${params.toString()}`,
-      );
-    },
+        "/contacts/presence",
+        { jwtToken },
+      ),
     markMessageSeen: (jwtToken: string, messageId: string) =>
       requestJson<MessageReceiptResponse>(
         config.apiBaseUrl,
@@ -242,5 +235,15 @@ async function buildBackendV2Error(path: string, response: Response) {
   const message = detail.trim()
     ? `${path} returned ${response.status}: ${detail.trim()}`
     : `${path} returned ${response.status}`;
-  return new Error(message);
+  return new BackendV2Error(message, response.status);
+}
+
+export class BackendV2Error extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "BackendV2Error";
+    this.status = status;
+  }
 }

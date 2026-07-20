@@ -1,82 +1,19 @@
 # Messaging Web Front Codex Entry Point
 
-You are the implementation assistant for a simple frontend-only chat application.
+Use `AGENTS.md` and `.agent/CURRENT_PLAN.md` as the execution source.
 
-## Read First
+Do not continue from old `.workflows` plans.
 
-Start with only:
+## Default Startup
 
-```text
-AGENTS.md
-CODEX.md
-.workflows/phase-plan.md
-.workflows/task-checklist.md
-```
+Read only:
 
-Read other files only when the current phase needs them.
+1. `AGENTS.md`
+2. `.agent/CURRENT_PLAN.md`
+3. The active plan's `TASKS.md`
 
-## Current Product Goal
+Then execute only the first unchecked task.
 
-Build a simple WhatsApp-like web chat frontend for local testing of the messaging backend service.
+## Stop Rule
 
-The frontend must support:
-
-- configurable API base URL
-- configurable WebSocket URL
-- manual JWT paste
-- connection status
-- conversation join
-- realtime message send/receive
-- emoji input
-- file upload/send
-- message history through backend WebSocket event
-- local network testing from another computer
-
-## Backend Contract
-
-Backend repo:
-
-```text
-https://github.com/almas-alright/messaging-service
-```
-
-Expected backend routes/events:
-
-- `GET /health`
-- `GET /ready`
-- `GET /auth/me`
-- `POST /conversations/{id}/attachments`
-- `GET /attachments/{id}`
-- WebSocket: `/ws?token=<JWT>`
-- WebSocket event: `conversation.join`
-- WebSocket event: `conversation.history`
-- WebSocket event: `message.send`
-
-## Phase Discipline
-
-- Execute only the requested or next unchecked phase.
-- One phase = one branch.
-- One task = one commit.
-- Stop after the phase.
-- Do not jump to future embed/widget/AI/voice phases early.
-
-## Frontend Boundary
-
-This repo owns:
-
-- chat UI
-- frontend state
-- backend API/WebSocket client
-- local configuration UX
-- file picker/upload UX
-- emoji UX
-- future embeddable widget UI
-
-This repo does not own:
-
-- backend API implementation
-- message persistence
-- JWT issuing
-- AI bot service
-- human support routing backend
-- production moderation logic
+One task, one commit, stop.
