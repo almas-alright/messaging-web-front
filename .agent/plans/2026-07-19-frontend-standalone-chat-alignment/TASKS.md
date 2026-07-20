@@ -131,11 +131,11 @@ task(frontend-chat.07): align contacts with authenticated identity
 
 ## FE-CHAT-08 — WebSocket messaging token connection
 
-- [ ] FE-CHAT-08.01 Update WebSocket client to use messaging access token
-- [ ] FE-CHAT-08.02 Reconnect after token refresh where practical
-- [ ] FE-CHAT-08.03 Join selected conversation after `connection.ready`
-- [ ] FE-CHAT-08.04 Show connected/joined/disconnected state
-- [ ] FE-CHAT-08.05 Remove false “message sent” state when socket send fails
+- [x] FE-CHAT-08.01 Update WebSocket client to use messaging access token
+- [x] FE-CHAT-08.02 Reconnect after token refresh where practical
+- [x] FE-CHAT-08.03 Join selected conversation after `connection.ready`
+- [x] FE-CHAT-08.04 Show connected/joined/disconnected state
+- [x] FE-CHAT-08.05 Remove false “message sent” state when socket send fails
 
 Commit:
 

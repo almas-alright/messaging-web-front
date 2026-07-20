@@ -84,28 +84,34 @@ export type MessagingWebSocket = {
 export type MessagingWebSocketHandlers = {
   onOpen?: () => void;
   onMessage?: (event: ServerEvent) => void;
-  onClose?: () => void;
+  onClose?: (event: CloseEvent) => void;
   onError?: () => void;
 };
 
-export function buildWebSocketUrl(config: WebSocketClientConfig, token: string) {
+export function buildWebSocketUrl(
+  config: WebSocketClientConfig,
+  accessToken: string,
+) {
   const url = new URL(config.wsBaseUrl);
-  url.searchParams.set("token", token);
+  url.searchParams.set("token", accessToken.trim());
   return url.toString();
 }
 
 export function createMessagingWebSocket(
   config: WebSocketClientConfig,
-  token: string,
+  accessToken: string,
   handlers: MessagingWebSocketHandlers = {},
 ): MessagingWebSocket {
   let socket: WebSocket | null = null;
 
   return {
     connect() {
-      socket = new WebSocket(buildWebSocketUrl(config, token));
+      if (!accessToken.trim()) {
+        throw new Error("A messaging access token is required");
+      }
+      socket = new WebSocket(buildWebSocketUrl(config, accessToken));
       socket.addEventListener("open", () => handlers.onOpen?.());
-      socket.addEventListener("close", () => handlers.onClose?.());
+      socket.addEventListener("close", (event) => handlers.onClose?.(event));
       socket.addEventListener("error", () => handlers.onError?.());
       socket.addEventListener("message", (event) => {
         handlers.onMessage?.(parseServerEvent(event.data));

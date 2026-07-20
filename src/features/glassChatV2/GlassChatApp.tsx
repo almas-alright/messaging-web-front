@@ -8,8 +8,14 @@ import {
   type DemoUserResponse,
   type PresenceStatus,
 } from "../../api/v2Client";
-import type { AuthUserResponse } from "../../api/authClient";
-import { loadStoredAccessToken } from "../../auth/sessionStorage";
+import {
+  createAuthClient,
+  type AuthUserResponse,
+} from "../../api/authClient";
+import {
+  loadStoredAccessToken,
+  refreshStoredSession,
+} from "../../auth/sessionStorage";
 import { loadStoredConfig } from "../../config/storage";
 import {
   createMessagingWebSocket,
@@ -38,6 +44,8 @@ type GlassChatAppProps = {
 export function GlassChatApp({ currentUser }: GlassChatAppProps) {
   const webSocketRef = useRef<MessagingWebSocket | null>(null);
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
+  const authReconnectAttemptsRef = useRef(0);
+  const authRefreshInFlightRef = useRef(false);
   const activeUser = {
     id: currentUser.user_id,
     email: currentUser.email ?? "",
@@ -57,7 +65,7 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
   const [messages, setMessages] = useState<GlassMessage[]>([]);
   const [messageDraft, setMessageDraft] = useState("");
   const [socketStatus, setSocketStatus] = useState<{
-    state: "idle" | "connecting" | "joined" | "error";
+    state: "idle" | "connecting" | "connected" | "joined" | "error";
     label: string;
   }>({
     state: "idle",
@@ -101,6 +109,7 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
 
   useEffect(() => {
     if (!activeConversation) {
+      authReconnectAttemptsRef.current = 0;
       disconnectGlassSocket();
       setSocketStatus({
         state: "idle",
@@ -237,14 +246,24 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     disconnectGlassSocket();
     setSocketStatus({ state: "connecting", label: "Connecting to chat..." });
 
-    const client = createMessagingWebSocket(loadStoredConfig(), jwtToken, {
+    let client: MessagingWebSocket;
+    client = createMessagingWebSocket(loadStoredConfig(), jwtToken, {
       onOpen: () => {
-        setSocketStatus({ state: "connecting", label: "Joining conversation..." });
+        setSocketStatus({
+          state: "connected",
+          label: "Socket connected. Waiting for the server...",
+        });
         void refreshContactPresence();
       },
       onMessage: (event) => handleGlassSocketMessage(event, conversationId),
-      onClose: () => {
-        setSocketStatus({ state: "idle", label: "Chat disconnected." });
+      onClose: (event) => {
+        if (webSocketRef.current !== client) return;
+        webSocketRef.current = null;
+        if (isAuthenticationClose(event)) {
+          void reconnectAfterTokenRefresh(conversationId);
+          return;
+        }
+        setSocketStatus({ state: "idle", label: "Disconnected." });
         void refreshContactPresence();
       },
       onError: () => {
@@ -264,6 +283,35 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     webSocketRef.current = null;
   }
 
+  async function reconnectAfterTokenRefresh(conversationId: string) {
+    if (authRefreshInFlightRef.current) return;
+    if (authReconnectAttemptsRef.current >= 1) {
+      setSocketStatus({
+        state: "error",
+        label: "The messaging session expired. Sign in again.",
+      });
+      return;
+    }
+
+    authRefreshInFlightRef.current = true;
+    authReconnectAttemptsRef.current += 1;
+    setSocketStatus({
+      state: "connecting",
+      label: "Refreshing the session and reconnecting...",
+    });
+    try {
+      await refreshStoredSession(createAuthClient(loadStoredConfig()));
+      connectGlassSocket(conversationId);
+    } catch {
+      setSocketStatus({
+        state: "error",
+        label: "The messaging session expired. Sign in again.",
+      });
+    } finally {
+      authRefreshInFlightRef.current = false;
+    }
+  }
+
   async function refreshContactPresence() {
     const jwtToken = loadStoredAccessToken().trim();
     if (!jwtToken) return;
@@ -277,8 +325,17 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
 
   function handleGlassSocketMessage(event: ServerEvent, conversationId: string) {
     if (event.type === "connection.ready") {
+      authReconnectAttemptsRef.current = 0;
+      setSocketStatus({
+        state: "connected",
+        label: "Connected. Joining conversation...",
+      });
       try {
-        webSocketRef.current?.send({
+        const socket = webSocketRef.current;
+        if (!socket) {
+          throw new Error("WebSocket is not connected");
+        }
+        socket.send({
           type: "conversation.join",
           conversation_id: conversationId,
         });
@@ -313,6 +370,14 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     }
 
     if (event.type === "error") {
+      if (
+        typeof event.error === "string" &&
+        isAuthenticationError(event.error)
+      ) {
+        disconnectGlassSocket();
+        void reconnectAfterTokenRefresh(conversationId);
+        return;
+      }
       setSocketStatus({
         state: "error",
         label: typeof event.error === "string" ? event.error : "Chat error.",
@@ -340,15 +405,19 @@ export function GlassChatApp({ currentUser }: GlassChatAppProps) {
     };
 
     try {
+      const socket = webSocketRef.current;
+      if (!socket) {
+        throw new Error("WebSocket is not connected");
+      }
       setMessages((current) => appendMessageIfNew(current, optimisticMessage));
-      webSocketRef.current?.send({
+      socket.send({
         type: "message.send",
         conversation_id: activeConversation.conversation_id,
         client_message_id: clientMessageId,
         body,
       });
       setMessageDraft("");
-      setSocketStatus({ state: "joined", label: "Message sent." });
+      setSocketStatus({ state: "joined", label: "Sending message..." });
     } catch (error) {
       setSocketStatus({
         state: "error",
@@ -860,6 +929,26 @@ function isMessageReceiptEvent(event: ServerEvent): event is MessageReceiptEvent
     typeof event.conversation_id === "string" &&
     "status" in event &&
     (event.status === "delivered" || event.status === "seen")
+  );
+}
+
+function isAuthenticationClose(event: CloseEvent) {
+  return (
+    event.code === 1008 ||
+    event.code === 4001 ||
+    event.code === 4003 ||
+    isAuthenticationError(event.reason)
+  );
+}
+
+function isAuthenticationError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("unauthorized") ||
+    normalized.includes("unauthenticated") ||
+    normalized.includes("token expired") ||
+    normalized.includes("invalid token") ||
+    normalized.includes("authentication")
   );
 }
 
