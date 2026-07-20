@@ -7,7 +7,7 @@ import {
   type DemoUserResponse,
   type PresenceStatus,
 } from "../../api/v2Client";
-import { loadStoredJwt } from "../../auth/demoAuthStorage";
+import { loadStoredAccessToken } from "../../auth/sessionStorage";
 import { loadStoredConfig } from "../../config/storage";
 import {
   createMessagingWebSocket,
@@ -269,11 +269,11 @@ export function GlassChatApp() {
   }
 
   function connectGlassSocket(conversationId: string) {
-    const jwtToken = loadStoredJwt().trim();
+    const jwtToken = loadStoredAccessToken().trim();
     if (!jwtToken) {
       setSocketStatus({
         state: "error",
-        label: "Local demo JWT is missing. Use the current demo once to store a token.",
+        label: "A messaging session is required to connect to chat.",
       });
       return;
     }
@@ -414,7 +414,7 @@ export function GlassChatApp() {
       return;
     }
 
-    const jwtToken = loadStoredJwt().trim();
+    const jwtToken = loadStoredAccessToken().trim();
     if (!jwtToken) {
       return;
     }

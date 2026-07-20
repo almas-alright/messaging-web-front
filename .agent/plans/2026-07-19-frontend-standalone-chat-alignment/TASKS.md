@@ -44,11 +44,11 @@ task(frontend-chat.02): add auth api client foundation
 
 ## FE-CHAT-03 — Token storage and session lifecycle
 
-- [ ] FE-CHAT-03.01 Add token/session storage wrapper
-- [ ] FE-CHAT-03.02 Store messaging access token and refresh token safely for browser demo
-- [ ] FE-CHAT-03.03 Add refresh flow helper
-- [ ] FE-CHAT-03.04 Add logout/clear session helper
-- [ ] FE-CHAT-03.05 Remove main-flow dependency on manual JWT textarea
+- [x] FE-CHAT-03.01 Add token/session storage wrapper
+- [x] FE-CHAT-03.02 Store messaging access token and refresh token safely for browser demo
+- [x] FE-CHAT-03.03 Add refresh flow helper
+- [x] FE-CHAT-03.04 Add logout/clear session helper
+- [x] FE-CHAT-03.05 Remove main-flow dependency on manual JWT textarea
 
 Commit:
 

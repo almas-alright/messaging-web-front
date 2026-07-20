@@ -24,8 +24,7 @@ type SettingsPanelProps = {
   jwtToken: string;
   currentUser: CurrentUserResponse | null;
   onConfigChange: (config: AppConfig) => void;
-  onJwtTokenChange: (token: string) => void;
-  onJwtClear: () => void;
+  onSessionClear: () => void;
   onConversationIdChange: (conversationId: string) => void;
   onCheckCurrentUser: () => void;
   onWebSocketConnect: () => void;
@@ -48,8 +47,7 @@ export function SettingsPanel({
   jwtToken,
   currentUser,
   onConfigChange,
-  onJwtTokenChange,
-  onJwtClear,
+  onSessionClear,
   onConversationIdChange,
   onCheckCurrentUser,
   onWebSocketConnect,
@@ -101,17 +99,7 @@ export function SettingsPanel({
       </section>
 
       <section className="panel-section">
-        <h2>Demo JWT</h2>
-        <label className="field">
-          <span>Paste token</span>
-          <textarea
-            value={jwtToken}
-            onChange={(event) => onJwtTokenChange(event.target.value)}
-            placeholder="Paste manually generated JWT"
-            rows={5}
-            spellCheck={false}
-          />
-        </label>
+        <h2>Messaging session</h2>
         <button
           className="full-width-button"
           type="button"
@@ -123,10 +111,10 @@ export function SettingsPanel({
         <button
           className="full-width-button full-width-button--secondary"
           type="button"
-          onClick={onJwtClear}
+          onClick={onSessionClear}
           disabled={!jwtToken.trim() && !currentUser}
         >
-          Clear demo JWT
+          Clear session
         </button>
         <div className={`backend-status backend-status--${authStatus.state}`}>
           <span>Auth</span>

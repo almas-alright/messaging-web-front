@@ -10,10 +10,9 @@ import {
   type ModerationPolicyListResponse,
 } from "./api/httpClient";
 import {
-  clearStoredJwt,
-  loadStoredJwt,
-  saveStoredJwt,
-} from "./auth/demoAuthStorage";
+  clearStoredSession,
+  loadStoredAccessToken,
+} from "./auth/sessionStorage";
 import { AppShell } from "./components/AppShell";
 import { AdminModerationPanel } from "./components/AdminModerationPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -99,14 +98,14 @@ function DemoApp() {
   const draftClientMessageIdRef = useRef<string | null>(null);
   const submittedModerationFlagKeysRef = useRef<Set<string>>(new Set());
   const [config, setConfig] = useState<AppConfig>(() => loadStoredConfig());
-  const [jwtToken, setJwtToken] = useState(() => loadStoredJwt());
+  const [jwtToken, setJwtToken] = useState(() => loadStoredAccessToken());
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
     state: "idle",
     label: "Not checked",
   });
   const [authStatus, setAuthStatus] = useState<AuthStatus>({
     state: "idle",
-    label: "JWT not checked",
+    label: "Session not checked",
   });
   const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(
     null,
@@ -184,7 +183,7 @@ function DemoApp() {
       void handleAdminFlagsRefresh();
     } else {
       setAdminModerationFlags([]);
-      setAdminFlagsStatus({ state: "idle", label: "Admin JWT required" });
+      setAdminFlagsStatus({ state: "idle", label: "Admin session required" });
     }
   }, [config.apiBaseUrl, currentUser, jwtToken]);
 
@@ -247,16 +246,11 @@ function DemoApp() {
     saveStoredConfig(nextConfig);
   }
 
-  function handleJwtTokenChange(nextToken: string) {
-    setJwtToken(nextToken);
-    saveStoredJwt(nextToken);
-  }
-
-  function handleJwtClear() {
+  function handleSessionClear() {
     setJwtToken("");
     setCurrentUser(null);
-    setAuthStatus({ state: "idle", label: "JWT cleared" });
-    clearStoredJwt();
+    setAuthStatus({ state: "idle", label: "Session cleared" });
+    clearStoredSession();
   }
 
   function handleSelectedFileChange(file: File | null) {
@@ -277,12 +271,12 @@ function DemoApp() {
   }
 
   async function handleCurrentUserCheck() {
-    setAuthStatus({ state: "checking", label: "Checking JWT" });
+    setAuthStatus({ state: "checking", label: "Checking session" });
     setCurrentUser(null);
     try {
       const user = await createHttpClient(config).getCurrentUser(jwtToken);
       setCurrentUser(user);
-      setAuthStatus({ state: "ok", label: "JWT accepted" });
+      setAuthStatus({ state: "ok", label: "Session accepted" });
     } catch (error) {
       setAuthStatus({
         state: "error",
@@ -825,8 +819,7 @@ function DemoApp() {
             jwtToken={jwtToken}
             currentUser={currentUser}
             onConfigChange={handleConfigChange}
-            onJwtTokenChange={handleJwtTokenChange}
-            onJwtClear={handleJwtClear}
+            onSessionClear={handleSessionClear}
             onConversationIdChange={setConversationId}
             onCheckCurrentUser={handleCurrentUserCheck}
             onWebSocketConnect={handleWebSocketConnect}
