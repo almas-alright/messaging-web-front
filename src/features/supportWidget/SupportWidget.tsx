@@ -8,6 +8,12 @@ import {
   saveSupportVisitorSession,
   type SupportVisitorSession,
 } from "./visitorSessionStorage";
+import {
+  type MessageCreatedEvent,
+  type MessagingWebSocket,
+  type ServerEvent,
+} from "../../realtime/webSocketClient";
+import { createSupportVisitorWebSocket } from "./visitorWebSocket";
 import "./supportWidget.css";
 
 export type SupportWidgetState =
@@ -20,6 +26,15 @@ type SupportWidgetProps = {
   config: SupportWidgetConfig;
 };
 
+type SupportMessage = {
+  id: string;
+  clientMessageId?: string;
+  body: string;
+  sender: "visitor" | "agent";
+  status?: "sending" | "sent" | "failed";
+  createdAt: string;
+};
+
 export function SupportWidget({ config }: SupportWidgetProps) {
   const [state, setState] = useState<SupportWidgetState>("collapsed");
   const [email, setEmail] = useState("");
@@ -30,6 +45,14 @@ export function SupportWidget({ config }: SupportWidgetProps) {
     message: string;
   }>({ state: "idle", message: "" });
   const openingTimerRef = useRef<number | null>(null);
+  const webSocketRef = useRef<MessagingWebSocket | null>(null);
+  const readyUserIdRef = useRef<string | null>(null);
+  const [messages, setMessages] = useState<SupportMessage[]>([]);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState<{
+    state: "idle" | "connecting" | "joined" | "disconnected" | "error";
+    message: string;
+  }>({ state: "idle", message: "Start a conversation to connect." });
   const panelId = "support-widget-panel";
 
   useEffect(() => {
@@ -37,8 +60,19 @@ export function SupportWidget({ config }: SupportWidgetProps) {
       if (openingTimerRef.current !== null) {
         window.clearTimeout(openingTimerRef.current);
       }
+      webSocketRef.current?.disconnect();
+      webSocketRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!visitorSession) return;
+    connectVisitorSocket(visitorSession);
+    return () => {
+      webSocketRef.current?.disconnect();
+      webSocketRef.current = null;
+    };
+  }, [visitorSession?.sessionId]);
 
   function openWidget() {
     if (openingTimerRef.current !== null) {
@@ -87,6 +121,141 @@ export function SupportWidget({ config }: SupportWidgetProps) {
         state: "error",
         message: friendlyStartError(error),
       });
+    }
+  }
+
+  function connectVisitorSocket(session: SupportVisitorSession) {
+    webSocketRef.current?.disconnect();
+    readyUserIdRef.current = null;
+    setConnectionStatus({ state: "connecting", message: "Connecting…" });
+
+    let socket: MessagingWebSocket;
+    socket = createSupportVisitorWebSocket(config, session.accessToken, {
+      onOpen: () =>
+        setConnectionStatus({
+          state: "connecting",
+          message: "Connected. Waiting for support…",
+        }),
+      onMessage: (event) => handleVisitorSocketMessage(event, session, socket),
+      onClose: () => {
+        if (webSocketRef.current !== socket) return;
+        webSocketRef.current = null;
+        setConnectionStatus({ state: "disconnected", message: "Disconnected." });
+      },
+      onError: () =>
+        setConnectionStatus({
+          state: "error",
+          message: "Live support is unavailable right now.",
+        }),
+    });
+    webSocketRef.current = socket;
+    try {
+      socket.connect();
+    } catch {
+      webSocketRef.current = null;
+      setConnectionStatus({
+        state: "error",
+        message: "Live support is unavailable right now.",
+      });
+    }
+  }
+
+  function handleVisitorSocketMessage(
+    event: ServerEvent,
+    session: SupportVisitorSession,
+    socket: MessagingWebSocket,
+  ) {
+    if (event.type === "connection.ready" && "user_id" in event) {
+      readyUserIdRef.current = String(event.user_id);
+      try {
+        socket.send({
+          type: "conversation.join",
+          conversation_id: session.conversationId,
+        });
+        setConnectionStatus({
+          state: "connecting",
+          message: "Joining your support conversation…",
+        });
+      } catch {
+        setConnectionStatus({
+          state: "error",
+          message: "Could not join the support conversation.",
+        });
+      }
+      return;
+    }
+
+    if (
+      event.type === "conversation.joined" &&
+      "conversation_id" in event &&
+      event.conversation_id === session.conversationId
+    ) {
+      setConnectionStatus({ state: "joined", message: "Support is connected." });
+      return;
+    }
+
+    if (
+      isSupportMessageEvent(event) &&
+      event.conversation_id === session.conversationId
+    ) {
+      setMessages((current) =>
+        upsertSupportMessage(current, event, readyUserIdRef.current),
+      );
+      return;
+    }
+
+    if (event.type === "error") {
+      if (
+        "client_message_id" in event &&
+        typeof event.client_message_id === "string"
+      ) {
+        setMessages((current) =>
+          current.map((message) =>
+            message.clientMessageId === event.client_message_id
+              ? { ...message, status: "failed" }
+              : message,
+          ),
+        );
+      }
+      setConnectionStatus({
+        state: "error",
+        message: "The support conversation encountered an error.",
+      });
+    }
+  }
+
+  function handleMessageSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const body = messageDraft.trim();
+    const socket = webSocketRef.current;
+    if (!visitorSession || !body || !socket) return;
+
+    const clientMessageId = createClientMessageId();
+    const optimisticMessage: SupportMessage = {
+      id: clientMessageId,
+      clientMessageId,
+      body,
+      sender: "visitor",
+      status: "sending",
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((current) => [...current, optimisticMessage]);
+    try {
+      socket.send({
+        type: "message.send",
+        conversation_id: visitorSession.conversationId,
+        client_message_id: clientMessageId,
+        body,
+      });
+      setMessageDraft("");
+    } catch {
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === clientMessageId
+            ? { ...message, status: "failed" }
+            : message,
+        ),
+      );
     }
   }
 
@@ -163,13 +332,43 @@ export function SupportWidget({ config }: SupportWidgetProps) {
 
       <div className="support-widget-body">
         {visitorSession ? (
-          <div className="support-widget-welcome" role="status">
-            <span aria-hidden="true">✓</span>
-            <h2>Conversation started</h2>
-            <p>{startStatus.message}</p>
+          <div className="support-widget-conversation">
+            <p
+              className={`support-widget-connection support-widget-connection--${connectionStatus.state}`}
+              role={connectionStatus.state === "error" ? "alert" : "status"}
+            >
+              {connectionStatus.message}
+            </p>
+            <div className="support-widget-messages" aria-live="polite">
+              {messages.length ? (
+                messages.map((message) => (
+                  <article
+                    className={`support-widget-message support-widget-message--${message.sender}`}
+                    key={message.id}
+                  >
+                    <p>{message.body}</p>
+                    <span>
+                      {formatMessageTime(message.createdAt)}
+                      {message.sender === "visitor" && message.status
+                        ? ` · ${message.status}`
+                        : ""}
+                    </span>
+                  </article>
+                ))
+              ) : (
+                <div className="support-widget-welcome">
+                  <span aria-hidden="true">✓</span>
+                  <h2>Conversation started</h2>
+                  <p>Send a message when live support connects.</p>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
-          <form className="support-widget-welcome-form" onSubmit={handleWelcomeSubmit}>
+          <form
+            className="support-widget-welcome-form"
+            onSubmit={handleWelcomeSubmit}
+          >
             <div className="support-widget-welcome">
               <span aria-hidden="true">?</span>
               <h2>How can we help?</h2>
@@ -207,21 +406,27 @@ export function SupportWidget({ config }: SupportWidgetProps) {
         )}
       </div>
 
-      <footer className="support-widget-footer">
+      <form className="support-widget-footer" onSubmit={handleMessageSubmit}>
         <input
           type="text"
           aria-label="Support message"
-          placeholder={
-            visitorSession
-              ? "Messaging is ready for the next step"
-              : "Start a conversation to send messages"
-          }
-          disabled
+          placeholder="Type your message"
+          value={messageDraft}
+          onChange={(event) => setMessageDraft(event.target.value)}
+          disabled={!visitorSession || connectionStatus.state !== "joined"}
         />
-        <button type="button" disabled aria-label="Send support message">
+        <button
+          type="submit"
+          disabled={
+            !visitorSession ||
+            connectionStatus.state !== "joined" ||
+            !messageDraft.trim()
+          }
+          aria-label="Send support message"
+        >
           Send
         </button>
-      </footer>
+      </form>
     </section>
   );
 }
@@ -231,4 +436,61 @@ function friendlyStartError(error: unknown) {
     return error.message;
   }
   return "Support is temporarily unavailable. Please try again.";
+}
+
+function isSupportMessageEvent(event: ServerEvent): event is MessageCreatedEvent {
+  return (
+    event.type === "message.created" &&
+    "message_id" in event &&
+    typeof event.message_id === "string" &&
+    "conversation_id" in event &&
+    typeof event.conversation_id === "string" &&
+    "sender_id" in event &&
+    typeof event.sender_id === "string" &&
+    "body" in event &&
+    typeof event.body === "string"
+  );
+}
+
+function upsertSupportMessage(
+  messages: SupportMessage[],
+  event: MessageCreatedEvent,
+  readyUserId: string | null,
+) {
+  const optimisticIndex = event.client_message_id
+    ? messages.findIndex(
+        (message) => message.clientMessageId === event.client_message_id,
+      )
+    : -1;
+  const message: SupportMessage = {
+    id: event.message_id,
+    clientMessageId: event.client_message_id,
+    body: event.body,
+    sender:
+      optimisticIndex >= 0 || event.sender_id === readyUserId
+        ? "visitor"
+        : "agent",
+    status: optimisticIndex >= 0 ? "sent" : undefined,
+    createdAt: event.created_at || new Date().toISOString(),
+  };
+  if (optimisticIndex >= 0) {
+    return messages.map((current, index) =>
+      index === optimisticIndex ? message : current,
+    );
+  }
+  if (messages.some((current) => current.id === message.id)) return messages;
+  return [...messages, message];
+}
+
+function createClientMessageId() {
+  if (typeof window.crypto?.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+  return `support-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function formatMessageTime(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }

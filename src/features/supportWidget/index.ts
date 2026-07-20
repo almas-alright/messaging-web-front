@@ -18,3 +18,7 @@ export {
   saveSupportVisitorSession,
   type SupportVisitorSession,
 } from "./visitorSessionStorage";
+export {
+  createSupportVisitorWebSocket,
+  supportVisitorWebSocketUrl,
+} from "./visitorWebSocket";

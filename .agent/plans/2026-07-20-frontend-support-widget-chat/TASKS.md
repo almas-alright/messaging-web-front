@@ -62,11 +62,11 @@ task(frontend-support.03): add visitor support session start
 
 ## FE-SUPPORT-04 — Visitor widget message flow
 
-- [ ] FE-SUPPORT-04.01 Connect widget WebSocket using visitor token
-- [ ] FE-SUPPORT-04.02 Join visitor support conversation after `connection.ready`
-- [ ] FE-SUPPORT-04.03 Render visitor and agent messages in widget panel
-- [ ] FE-SUPPORT-04.04 Send visitor text message
-- [ ] FE-SUPPORT-04.05 Show sending/sent/failed state without false success
+- [x] FE-SUPPORT-04.01 Connect widget WebSocket using visitor token
+- [x] FE-SUPPORT-04.02 Join visitor support conversation after `connection.ready`
+- [x] FE-SUPPORT-04.03 Render visitor and agent messages in widget panel
+- [x] FE-SUPPORT-04.04 Send visitor text message
+- [x] FE-SUPPORT-04.05 Show sending/sent/failed state without false success
 
 Commit:
 
