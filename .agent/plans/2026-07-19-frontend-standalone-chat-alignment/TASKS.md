@@ -19,10 +19,10 @@ task(frontend-chat.01): align frontend agent workflow
 
 ## FE-CHAT-02 — API and auth client foundation
 
-- [ ] FE-CHAT-02.01 Add/clean API client module for backend auth endpoints
-- [ ] FE-CHAT-02.02 Add typed request/response models for register/login/refresh/logout/me
-- [ ] FE-CHAT-02.03 Add auth error normalization
-- [ ] FE-CHAT-02.04 Keep backend API base URL configurable
+- [x] FE-CHAT-02.01 Add/clean API client module for backend auth endpoints
+- [x] FE-CHAT-02.02 Add typed request/response models for register/login/refresh/logout/me
+- [x] FE-CHAT-02.03 Add auth error normalization
+- [x] FE-CHAT-02.04 Keep backend API base URL configurable
 
 Backend endpoints:
 
